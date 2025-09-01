@@ -1,0 +1,4 @@
+# Contrato simple: ADIA_V1
+# Valida presencia de campos requeridos
+required:
+  - contexto

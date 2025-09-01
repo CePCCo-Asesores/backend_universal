@@ -1,0 +1,24 @@
+contrato: contrato_distribucion
+version: 1.0.0
+tipo: backend
+activacion: continua
+estructura:
+  - entrada: producto_generado
+    formato: txt
+    validacion: obligatoria
+  - entrada: canal_distribucion
+    formato: json
+    validacion: obligatoria
+  - salida: entrega_silenciosa
+    formato: json
+    validacion: modular
+condiciones:
+  - interacción_directa: prohibida
+  - trazabilidad: activa
+  - almacenamiento: desactivado
+  - neurodiversidad: principio rector
+  - tono: sobrio_literal
+auditoría:
+  - logs: fabricador.log
+  - revisión: por lote
+  - validación: sin contacto

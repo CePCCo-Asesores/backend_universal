@@ -1,0 +1,15 @@
+/auth/google:
+  controller: AuthController
+  action: loginConGoogle
+
+/adia_generate.php:
+  controller: AgentController
+  action: activarAdia
+
+/fabricador_generate.php:
+  controller: AgentController
+  action: activarFabricador
+
+/health:
+  controller: SystemController
+  action: estado

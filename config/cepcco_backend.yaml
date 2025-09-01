@@ -1,0 +1,29 @@
+entorno: CEPCCO
+version: 1.0.0
+modulos_activados:
+  - planificacion_inclusiva
+  - trazabilidad_emocional
+  - fabricador_de_prompts
+  - distribucion_silenciosa
+estructura:
+  - nombre: planificador
+    tipo: asistente
+    activacion: auto
+    contrato: contrato_planificacion.yaml
+  - nombre: trazador
+    tipo: auditor
+    activacion: manual
+    contrato: contrato_trazabilidad.yaml
+  - nombre: fabricador
+    tipo: generador
+    activacion: bajo demanda
+    contrato: contrato_fabricador.yaml
+  - nombre: distribuidor
+    tipo: backend
+    activacion: continua
+    contrato: contrato_distribucion.yaml
+seguridad:
+  neurodiversidad: obligatoria
+  almacenamiento: desactivado
+  tono: sobrio_literal
+  validacion: modular

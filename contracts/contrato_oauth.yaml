@@ -1,0 +1,18 @@
+
+modulo: OAUTH
+tipo: autenticacion
+formato: YAML
+entorno: UNIVERSAL_BACKEND_V1
+
+required:
+  - token_google
+
+estructura:
+  token_google:
+    tipo: string
+    descripcion: token OAuth de Google para validación
+
+licencia:
+  uso: no exclusivo
+  propagación: silenciosa
+  dignidad: obligatoria

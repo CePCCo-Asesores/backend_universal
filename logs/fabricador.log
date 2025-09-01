@@ -1,0 +1,7 @@
+[2025-08-20 10:42:11] FABRICADOR_V1 activado por usuario_id=9
+[2025-08-20 10:42:12] Solicitud recibida: agente=AGENTE_EMOCIONAL_V1
+[2025-08-20 10:42:13] Prompt ensamblado con estructura de 3 bloques
+[2025-08-20 10:42:14] Prompt entregado sin errores
+[2025-08-21 08:17:55] FABRICADOR_V1 activado por usuario_id=12
+[2025-08-21 08:17:56] Error: campo 'estructura' vacío
+[2025-08-21 08:17:57] Fabricación abortada por validación fallida

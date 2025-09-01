@@ -1,0 +1,13 @@
+licencia:
+  tipo: no exclusiva
+  formato: YAML
+  uso:
+    comercial: permitido bajo contrato
+    personal: libre
+    redistribución: permitida con trazabilidad
+  principios:
+    - dignidad
+    - trazabilidad
+    - no explotación
+    - neuroinclusión estructural
+    - separación de contexto

@@ -1,0 +1,23 @@
+contrato: contrato_trazabilidad
+version: 1.0.0
+tipo: auditor
+activacion: manual
+estructura:
+  - entrada: activacion_asistente
+    formato: json
+    validacion: obligatoria
+  - entrada: respuesta_emitida
+    formato: txt
+    validacion: obligatoria
+  - salida: log_validado
+    formato: txt
+    validacion: modular
+condiciones:
+  - tono: sobrio_literal
+  - simulacion: prohibida
+  - almacenamiento: desactivado
+  - neurodiversidad: principio rector
+auditoría:
+  - frecuencia: por activación
+  - logs: fabricador.log
+  - revisión: manual

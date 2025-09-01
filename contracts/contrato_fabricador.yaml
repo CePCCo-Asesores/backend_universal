@@ -1,0 +1,23 @@
+contrato: contrato_fabricador
+version: 1.0.0
+tipo: generador
+activacion: bajo demanda
+estructura:
+  - entrada: solicitud_usuario
+    formato: txt
+    validacion: obligatoria
+  - entrada: contexto_emocional
+    formato: json
+    validacion: opcional
+  - salida: prompt_estructurado
+    formato: txt
+    validacion: modular
+condiciones:
+  - tono: sobrio_literal
+  - almacenamiento: desactivado
+  - simulacion: prohibida
+  - neurodiversidad: principio rector
+auditoría:
+  - trazabilidad: activa
+  - logs: fabricador.log
+  - revisión: por activación

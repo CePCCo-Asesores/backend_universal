@@ -1,0 +1,4 @@
+# Contrato simple: FABRICADOR_V1
+# Valida presencia de campos requeridos
+required:
+  - blueprint

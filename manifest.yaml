@@ -1,0 +1,58 @@
+entorno: UNIVERSAL_BACKEND_V1
+estado: operativo
+timestamp: 2025-09-01T06:59:00-06:00
+
+auth:
+  tipo: Google + JWT
+  middleware: AuthMiddleware
+  servicios:
+    - AuthController
+    - GoogleAuthService
+    - JwtService
+
+modulos:
+  ADIA_V1:
+    estado: activable
+    contrato: contracts/ADIA_V1.yaml
+    controlador: AgentController
+    funcion: activarAdia
+    ruta: /adia_generate.php
+    licencia: licencia_ética.yaml
+    requiere_contexto: true
+    auditabilidad: enabled
+
+  FABRICADOR_V1:
+    estado: activable
+    contrato: contracts/FABRICADOR_V1.yaml
+    controlador: AgentController
+    funcion: activarFabricador
+    ruta: /fabricador_generate.php
+    licencia: licencia_ética.yaml
+    requiere_blueprint: true
+    auditabilidad: enabled
+
+sistema:
+  controlador: SystemController
+  funciones:
+    - estado
+    - timestamp
+    - entorno
+    - modulos_activos
+
+validacion:
+  clase: ContractValidator
+  pruebas: contract_test.php
+  campos_requeridos: true
+  estructura_literal: true
+  licencia_ética: obligatoria
+
+licencia:
+  tipo: no exclusiva
+  formato: YAML
+  archivo: licencia_ética.yaml
+  principios:
+    - dignidad
+    - trazabilidad
+    - no explotación
+
+  

@@ -1,0 +1,8 @@
+[2025-08-01 09:14:22] ADIA_V1 activado por usuario_id=12
+[2025-08-01 09:14:23] Prompt maestro cargado correctamente
+[2025-08-01 09:14:24] Recolección de respuestas_16 iniciada
+[2025-08-01 09:14:27] Simulación completada con GeminiClient
+[2025-08-01 09:14:28] Planeación inclusiva entregada
+[2025-08-15 11:03:10] ADIA_V1 activado por usuario_id=7
+[2025-08-15 11:03:11] Error en campo 'grado': valor vacío
+[2025-08-15 11:03:12] Planeación abortada por validación fallida

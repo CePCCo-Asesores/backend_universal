@@ -1,0 +1,24 @@
+monitor:
+  entorno: produccion_publica
+  modulos:
+    ADIA_V1:
+      ruta: /adia_generate.php
+      log: logs/adia.log
+      alerta_si: error, timeout, respuesta_vacia
+
+    FABRICADOR_V1:
+      ruta: /fabricador_generate.php
+      log: logs/fabricador.log
+      alerta_si: error, respuesta_malformada
+
+    OAuth:
+      ruta: /auth/google
+      log: logs/oauth.log
+      alerta_si: token_invalido, usuario_nulo
+
+    Sistema:
+      ruta: /health
+      alerta_si: estado != activo
+
+  frecuencia: 5min
+  entrega_alertas: silenciosa

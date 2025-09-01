@@ -1,0 +1,13 @@
+contrato_entorno:
+  entorno: produccion_publica
+  limites:
+    - max_requests_por_ip: 1000/dia
+    - longitud_max_input: 2048
+  rutas_activables:
+    - /adia_generate.php
+    - /fabricador_generate.php
+    - /auth/google
+    - /health
+  monitoreo:
+    - logs: activados
+    - alertas: basicas

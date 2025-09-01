@@ -1,0 +1,23 @@
+contrato: contrato_planificacion
+version: 1.0.0
+tipo: asistente
+activacion: auto
+estructura:
+  - entrada: perfil_usuario
+    formato: json
+    validacion: obligatoria
+  - entrada: contexto_operativo
+    formato: yaml
+    validacion: obligatoria
+  - salida: plan_estructurado
+    formato: yaml
+    validacion: modular
+condiciones:
+  - dignidad_neurodivergente: no negociable
+  - almacenamiento: desactivado
+  - tono: sobrio_literal
+  - ejecución: no simulada
+auditoría:
+  - trazabilidad: activa
+  - logs: fabricador.log
+  - revisión: cada activación

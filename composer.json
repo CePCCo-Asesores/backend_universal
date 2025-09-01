@@ -1,0 +1,18 @@
+{
+  "name": "cepcco/backend",
+  "description": "CEPCCO Backend modular (Render blueprint)",
+  "type": "project",
+  "require": {
+    "php": ">=8.0",
+    "symfony/yaml": "^6.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Controllers\\": "controllers/",
+      "Services\\": "services/",
+      "Utils\\": "utils/"
+    }
+  },
+  "minimum-stability": "stable",
+  "license": "MIT"
+}
