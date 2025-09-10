@@ -196,7 +196,7 @@ function PasoDos({ userData, setUserData }: any) {
 }
 
 // Paso 3: Placeholder
-function PasoTres({ userData, setUserData }: any) {
+function PasoTres({ userData, setUserData }: StepProps) {
   return (
     <div className="text-center py-12">
       <h2 className="text-2xl font-bold mb-4">🎯 ¡Excelente progreso!</h2>
