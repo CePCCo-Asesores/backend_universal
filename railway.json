@@ -1,0 +1,21 @@
+{
+  "services": [
+    {
+      "name": "backend-php",
+      "source": "./backend",
+      "build": {
+        "command": "composer install"
+      }
+    },
+    {
+      "name": "frontend-nd", 
+      "source": "./frontend",
+      "build": {
+        "command": "npm run build"
+      },
+      "start": {
+        "command": "npm start"
+      }
+    }
+  ]
+}
