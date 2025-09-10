@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Brain, Users, BookOpen, Heart, Stethoscope } from 'lucide-react'
 
 interface UserData {
   tipoUsuario: string
@@ -21,16 +20,14 @@ export default function AsistenteND() {
     paso: 1
   })
 
-  const [historial, setHistorial] = useState<string[]>([])
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <header className="text-center mb-8">
-          <Brain className="w-16 h-16 mx-auto text-purple-600 mb-4" />
+          <div className="text-6xl mb-4">🧠</div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            🧠 Asistente de Planeación Inclusiva y Neurodivergente
+            Asistente de Planeación Inclusiva y Neurodivergente
           </h1>
           <p className="text-lg text-gray-600">
             Mi misión es ayudarte a crear actividades que celebren y potencien la diversidad neurológica
@@ -45,9 +42,6 @@ export default function AsistenteND() {
           {userData.paso === 1 && <PasoUno userData={userData} setUserData={setUserData} />}
           {userData.paso === 2 && <PasoDos userData={userData} setUserData={setUserData} />}
           {userData.paso === 3 && <PasoTres userData={userData} setUserData={setUserData} />}
-          {userData.paso === 4 && <PasoCuatro userData={userData} setUserData={setUserData} />}
-          {userData.paso === 5 && <PasoCinco userData={userData} setUserData={setUserData} />}
-          {userData.paso === 6 && <PasoSeis userData={userData} setUserData={setUserData} />}
         </div>
 
         {/* Barra de progreso */}
@@ -71,11 +65,11 @@ export default function AsistenteND() {
 // Paso 1: Identificación de usuario
 function PasoUno({ userData, setUserData }: any) {
   const tiposUsuario = [
-    { id: 'docente', label: '1️⃣ Docente', icon: BookOpen, descripcion: 'Trabajo con estudiantes en aula' },
-    { id: 'terapeuta', label: '2️⃣ Terapeuta', icon: Heart, descripcion: 'Trabajo con clientes/pacientes en sesiones' },
-    { id: 'padre', label: '3️⃣ Padre/Madre', icon: Users, descripcion: 'Trabajo con mis hijos en rutinas familiares' },
-    { id: 'medico', label: '4️⃣ Médico', icon: Stethoscope, descripcion: 'Trabajo con pacientes en consultorio' },
-    { id: 'mixto', label: '6️⃣ Mixto', icon: Users, descripcion: 'Ej. madre-docente, terapeuta-padre' }
+    { id: 'docente', label: '1️⃣ Docente', descripcion: 'Trabajo con estudiantes en aula' },
+    { id: 'terapeuta', label: '2️⃣ Terapeuta', descripcion: 'Trabajo con clientes/pacientes en sesiones' },
+    { id: 'padre', label: '3️⃣ Padre/Madre', descripcion: 'Trabajo con mis hijos en rutinas familiares' },
+    { id: 'medico', label: '4️⃣ Médico', descripcion: 'Trabajo con pacientes en consultorio' },
+    { id: 'mixto', label: '6️⃣ Mixto', descripcion: 'Ej. madre-docente, terapeuta-padre' }
   ]
 
   return (
@@ -96,7 +90,13 @@ function PasoUno({ userData, setUserData }: any) {
             onClick={() => setUserData({...userData, tipoUsuario: tipo.id, paso: 2})}
             className="group flex items-start p-6 border-2 border-gray-200 rounded-xl hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 text-left"
           >
-            <tipo.icon className="w-8 h-8 mr-4 text-purple-600 group-hover:text-purple-700 flex-shrink-0 mt-1" />
+            <div className="text-2xl mr-4 flex-shrink-0 mt-1">
+              {tipo.id === 'docente' && '📚'}
+              {tipo.id === 'terapeuta' && '❤️'}
+              {tipo.id === 'padre' && '👥'}
+              {tipo.id === 'medico' && '🩺'}
+              {tipo.id === 'mixto' && '🔄'}
+            </div>
             <div>
               <div className="font-semibold text-gray-800 mb-1">{tipo.label}</div>
               <div className="text-sm text-gray-600">{tipo.descripcion}</div>
@@ -195,60 +195,27 @@ function PasoDos({ userData, setUserData }: any) {
   )
 }
 
-// Placeholder para los demás pasos
+// Paso 3: Placeholder
 function PasoTres({ userData, setUserData }: any) {
   return (
     <div className="text-center py-12">
-      <h2 className="text-2xl font-bold mb-4">Paso 3: Menú Contextualizado</h2>
-      <p className="text-gray-600 mb-6">En desarrollo...</p>
+      <h2 className="text-2xl font-bold mb-4">🎯 ¡Excelente progreso!</h2>
+      <div className="mb-6">
+        <p className="text-gray-600 mb-2">
+          <strong>Usuario:</strong> {userData.tipoUsuario}
+        </p>
+        <p className="text-gray-600">
+          <strong>Neurodiversidades:</strong> {userData.neurodiversidades.join(', ')}
+        </p>
+      </div>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <p className="text-blue-800">
+          🚧 Los próximos pasos están en desarrollo. Tu selección ha sido guardada exitosamente.
+        </p>
+      </div>
       <button
         onClick={() => setUserData({...userData, paso: 2})}
-        className="px-6 py-2 text-gray-600 hover:text-gray-800"
-      >
-        ← Volver al paso anterior
-      </button>
-    </div>
-  )
-}
-
-function PasoCuatro({ userData, setUserData }: any) {
-  return (
-    <div className="text-center py-12">
-      <h2 className="text-2xl font-bold mb-4">Paso 4: Recolección Inteligente</h2>
-      <p className="text-gray-600 mb-6">En desarrollo...</p>
-      <button
-        onClick={() => setUserData({...userData, paso: 3})}
-        className="px-6 py-2 text-gray-600 hover:text-gray-800"
-      >
-        ← Volver al paso anterior
-      </button>
-    </div>
-  )
-}
-
-function PasoCinco({ userData, setUserData }: any) {
-  return (
-    <div className="text-center py-12">
-      <h2 className="text-2xl font-bold mb-4">Paso 5: Personalización Avanzada</h2>
-      <p className="text-gray-600 mb-6">En desarrollo...</p>
-      <button
-        onClick={() => setUserData({...userData, paso: 4})}
-        className="px-6 py-2 text-gray-600 hover:text-gray-800"
-      >
-        ← Volver al paso anterior
-      </button>
-    </div>
-  )
-}
-
-function PasoSeis({ userData, setUserData }: any) {
-  return (
-    <div className="text-center py-12">
-      <h2 className="text-2xl font-bold mb-4">Paso 6: Generación de Planeación ND</h2>
-      <p className="text-gray-600 mb-6">En desarrollo...</p>
-      <button
-        onClick={() => setUserData({...userData, paso: 5})}
-        className="px-6 py-2 text-gray-600 hover:text-gray-800"
+        className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
       >
         ← Volver al paso anterior
       </button>
