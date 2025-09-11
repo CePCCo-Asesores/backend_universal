@@ -28,10 +28,11 @@ if (file_exists($autoload)) {
 
 // Requiere directos por robustez (puedes omitir si te quedas solo con PSR-4)
 @require_once $root . '/controllers/AuthController.php';
-@require_once $root . '/controllers/AgentController.php';
+@require_once $root . '/controllers/ModuleController.php';
 @require_once $root . '/controllers/SystemController.php';
 @require_once $root . '/services/GoogleAuthService.php';
 @require_once $root . '/services/JwtService.php';
+@require_once $root . '/services/DB.php';
 @require_once $root . '/middleware/AuthMiddleware.php';
 @require_once $root . '/utils/ContractValidator.php';
 @require_once $root . '/config/jwt_secret.php';
