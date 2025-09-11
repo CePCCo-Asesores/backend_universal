@@ -1,0 +1,42 @@
+### 1) Login Google -> obtiene jwt
+POST {{BACKEND}}/auth/google
+Content-Type: application/json
+
+{
+  "token_google": "<<ID_TOKEN_GOOGLE>>"
+}
+
+### 2) Activación directa del plan
+POST {{BACKEND}}/module/activate
+Authorization: Bearer {{JWT}}
+Content-Type: application/json
+
+{
+  "module": "NEUROPLAN_360",
+  "payload": {
+    "usuario": "docente",
+    "neurodiversidades": ["autismo", "tdah"],
+    "formato": "practico",
+    "contexto": {
+      "grado": "3° primaria",
+      "contenido": "Matemáticas",
+      "tema": "Fracciones",
+      "sesiones": 4,
+      "duracion": 50
+    },
+    "sensibilidades": ["🔊 Sonidos fuertes o inesperados"],
+    "entornos": ["🏫 Escuela/Consultorio"],
+    "limitaciones": [],
+    "prioridad": "Reducir ansiedad en transiciones"
+  }
+}
+
+### 3) Flujo por pasos - start
+POST {{BACKEND}}/module/activate
+Authorization: Bearer {{JWT}}
+Content-Type: application/json
+
+{
+  "module": "NEUROPLAN_360",
+  "payload": { "action": "start" }
+}
