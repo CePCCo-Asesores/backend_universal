@@ -36,6 +36,9 @@ if (file_exists($autoload)) {
 @require_once $root . '/middleware/AuthMiddleware.php';
 @require_once $root . '/utils/ContractValidator.php';
 @require_once $root . '/config/jwt_secret.php';
+@require_once $root . '/modules/ModuleInterface.php';
+@require_once $root . '/modules/ModuleRegistry.php';
+
 
 // ---------- Helpers ----------
 function json_response($data, int $status = 200): void {
