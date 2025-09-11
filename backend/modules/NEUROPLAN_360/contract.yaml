@@ -1,0 +1,39 @@
+type: object
+required: [usuario, neurodiversidades, formato, contexto]
+additionalProperties: false
+
+properties:
+  usuario:
+    type: string
+    enum: [docente, terapeuta, padre, medico, otro, mixto]
+  neurodiversidades:
+    type: array
+    minItems: 1
+    items: { type: string }
+  formato:
+    type: string
+    enum: [practico, completo, nd_plus, sensorial, semaforo]
+  contexto:
+    type: object
+    required: [grado, contenido, tema, sesiones, duracion]
+    properties:
+      grado: { type: string, minLength: 1 }
+      contenido: { type: string, minLength: 1 }
+      tema: { type: string, minLength: 1 }
+      sesiones: { type: integer, minimum: 1 }
+      duracion: { type: integer, minimum: 1 }
+  sensibilidades:
+    type: array
+    items: { type: string }
+    default: []
+  entornos:
+    type: array
+    items: { type: string }
+    default: []
+  limitaciones:
+    type: array
+    items: { type: string }
+    default: []
+  prioridad:
+    type: string
+    default: ""
