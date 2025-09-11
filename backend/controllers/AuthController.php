@@ -22,7 +22,6 @@ class AuthController
             return ['error' => 'Token de Google inválido'];
         }
 
-        // Generar JWT propio (1 hora por defecto)
         $jwt = JwtService::generate([
             'sub'   => $perfil['sub'],
             'email' => $perfil['email']
