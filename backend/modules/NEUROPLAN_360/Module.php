@@ -5,20 +5,20 @@ namespace Modules\NEUROPLAN_360;
 
 use Modules\ModuleInterface;
 use Services\DB;
+use Services\Migrator;
 
 final class Module implements ModuleInterface
 {
     public function run(array $payload, array $authUser = []): array
     {
         $schema = 'NEUROPLAN_360';
-        $email  = $authUser['email'] ?? ($payload['usuarioEmail'] ?? 'anon@local');
-        $pdo    = DB::conn();
 
-        // Asegura schema y tablas (o usa tu Migrator global si lo tienes)
-        $this->ensureSchema($pdo, $schema);
-        $this->ensureTables($pdo, $schema);
+        // Migraciones del módulo (idempotente)
+        Migrator::apply($schema);
 
-        // Soporta flujo “wizard” (action) o payload final “directo”
+        $email = $authUser['email'] ?? ($payload['usuarioEmail'] ?? 'anon@local');
+        $pdo   = DB::conn();
+
         $action = (string)($payload['action'] ?? 'direct');
 
         if ($action === 'start') {
@@ -32,7 +32,6 @@ final class Module implements ModuleInterface
             $input = (array)($payload['input'] ?? []);
             if ($sid === '' || $step < 1) { http_response_code(422); return ['error'=>'session_id y step requeridos']; }
 
-            // (opcional) validación fina por paso
             if (class_exists(Validation::class)) {
                 Validation::validateStep($step, $input);
             }
@@ -51,49 +50,16 @@ final class Module implements ModuleInterface
             return ['ok'=>true, 'plan_id'=>$pid, 'plan'=>$plan];
         }
 
-        // Modo directo: payload final ya cumple contract.yaml
+        // Modo directo (sin wizard)
+        if (class_exists(Validation::class)) {
+            Validation::validateDirect($payload);
+        }
         $plan = Planner::build($payload);
         $pid  = $this->savePlan($pdo, $schema, $email, $payload, $plan);
         return ['ok'=>true, 'plan_id'=>$pid, 'plan'=>$plan];
     }
 
-    /* ---------- infra mínima ---------- */
-
-    private function ensureSchema(\PDO $pdo, string $schema): void
-    {
-        $pdo->exec("CREATE SCHEMA IF NOT EXISTS {$schema}");
-        // tabla de migraciones por módulo (opcional)
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS {$schema}.__migrations(
-              id TEXT PRIMARY KEY,
-              applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )");
-    }
-
-    private function ensureTables(\PDO $pdo, string $schema): void
-    {
-        // sessions (si usas flujo por pasos)
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS {$schema}.sessions(
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              email TEXT NOT NULL,
-              step INTEGER NOT NULL DEFAULT 1,
-              data JSONB NOT NULL DEFAULT '{}'::jsonb,
-              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )");
-
-        // plans (salida final)
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS {$schema}.plans(
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              email TEXT NOT NULL,
-              input JSONB NOT NULL,
-              plan  JSONB NOT NULL,
-              status TEXT NOT NULL DEFAULT 'generated',
-              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )");
-    }
+    /* ---------- helpers de sesión/plan ---------- */
 
     private function createSession(\PDO $pdo, string $schema, string $email): string
     {
@@ -106,7 +72,7 @@ final class Module implements ModuleInterface
     {
         $st=$pdo->prepare("SELECT id, step, data FROM {$schema}.sessions WHERE id=:id");
         $st->execute([':id'=>$sid]);
-        $r=$st->fetch();
+        $r=$st->fetch(\PDO::FETCH_ASSOC);
         return $r ?: null;
     }
 
@@ -123,7 +89,6 @@ final class Module implements ModuleInterface
         if (!$row) { http_response_code(404); throw new \RuntimeException('session not found'); }
         $data = is_array($row['data']) ? $row['data'] : (json_decode((string)$row['data'], true) ?? []);
 
-        // merge simple (ajusta según tu diseño de pasos)
         $data['__steps'] = array_values(array_unique(array_merge($data['__steps'] ?? [], [$step])));
 
         switch ($step) {
@@ -146,11 +111,11 @@ final class Module implements ModuleInterface
             $data['prioridad']    = (string)($input['prioridad'] ?? '');
             break;
           case 6: $data['formato'] = (string)($input['formato'] ?? ''); break;
-          default: throw new \RuntimeException('step no soportado');
+          default: throw new \InvalidArgumentException('step no soportado');
         }
 
         $st=$pdo->prepare("UPDATE {$schema}.sessions SET data=:d, step=:s, updated_at=now() WHERE id=:id");
-        $st->execute([':d'=>json_encode($data,JSON_UNESCAPED_UNICODE),':s'=>$step,':id'=>$sid]);
+        $st->execute([':d'=>json_encode($data, JSON_UNESCAPED_UNICODE), ':s'=>$step, ':id'=>$sid]);
 
         return $data;
     }
@@ -166,8 +131,8 @@ final class Module implements ModuleInterface
         $st=$pdo->prepare("INSERT INTO {$schema}.plans(email,input,plan) VALUES(:e,:i,:p) RETURNING id");
         $st->execute([
           ':e'=>$email,
-          ':i'=>json_encode($input,JSON_UNESCAPED_UNICODE),
-          ':p'=>json_encode($plan,JSON_UNESCAPED_UNICODE),
+          ':i'=>json_encode($input, JSON_UNESCAPED_UNICODE),
+          ':p'=>json_encode($plan, JSON_UNESCAPED_UNICODE),
         ]);
         return (string)$st->fetchColumn();
     }
