@@ -1,21 +1,16 @@
+# backend/routes.yaml
 /auth/google:
   controller: AuthController
-  action: loginConGoogle
+  action: google
 
-/health:
-  controller: SystemController
-  action: estado
-
-# Endpoints universales de módulos (sin rutas “ADIA/FABRICADOR” fijas)
-# Se pasa el nombre del módulo en el body: {"module":"NOMBRE_MODULO", ...}
-# y, si aplica, el payload específico del contrato: {"payload": {...}}
-
-# Activar/ejecutar acción principal del módulo
 /module/activate:
   controller: ModuleController
   action: activate
 
-# Alta de usuario (por módulo) – opcional, si tu flujo lo requiere
 /module/registerUser:
   controller: ModuleController
   action: registerUser
+
+/health:
+  controller: HealthController
+  action: ping
