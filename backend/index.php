@@ -2,11 +2,12 @@
 declare(strict_types=1);
 
 /**
- * Front Controller – CEPCCO Backend
+ * Front Controller – CEPCCO Backend Universal
  * - Lee routes.yaml
  * - Despacha controller/action
  * - Valida contratos para acciones activar*
  * - Responde JSON con códigos HTTP adecuados
+ * - 100% UNIVERSAL - Autoload automático de módulos
  */
 
 $env = getenv('ENV') ?: 'development';
@@ -26,15 +27,29 @@ if (file_exists($autoload)) {
     require_once $autoload;
 }
 
-// Requiere directos por robustez (puedes omitir si te quedas solo con PSR-4)
-@require_once $root . '/controllers/AuthController.php';
-@require_once $root . '/controllers/ModuleController.php';
-@require_once $root . '/controllers/SystemController.php';
-@require_once $root . '/services/GoogleAuthService.php';
-@require_once $root . '/services/JwtService.php';
-@require_once $root . '/services/DB.php';
-@require_once $root . '/middleware/AuthMiddleware.php';
-@require_once $root . '/utils/ContractValidator.php';
+// AUTOLOADER UNIVERSAL - Carga cualquier controlador/clase automáticamente
+spl_autoload_register(function($class) use ($root) {
+    $directories = ['controllers', 'services', 'middleware', 'utils', 'modules', 'contracts', 'validators'];
+    
+    foreach ($directories as $dir) {
+        // Formato 1: NombreClase.php
+        $file1 = $root . "/{$dir}/{$class}.php";
+        if (file_exists($file1)) {
+            require_once $file1;
+            return;
+        }
+        
+        // Formato 2: nombre_clase.php (para test_gemini_controller.php)
+        $snakeCase = strtolower(preg_replace('/([A-Z])/', '_$1', lcfirst($class)));
+        $file2 = $root . "/{$dir}/{$snakeCase}.php";
+        if (file_exists($file2)) {
+            require_once $file2;
+            return;
+        }
+    }
+});
+
+// Archivos críticos que siempre necesitas
 @require_once $root . '/config/jwt_secret.php';
 @require_once $root . '/modules/ModuleInterface.php';
 @require_once $root . '/modules/ModuleRegistry.php';
