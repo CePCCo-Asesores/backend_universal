@@ -1,25 +1,36 @@
-# backend/routes.yaml
-/auth/google:
-  controller: AuthController
-  action: google
-
-/module/activate:
-  controller: ModuleController
-  action: activate
-
-/module/registerUser:
-  controller: ModuleController
-  action: registerUser
-
-/health:
-  controller: HealthController
-  action: ping
-
-/metrics:
-  controller: MetricsController
-  action: index
-
-   # Módulo de prueba Gemini
+# backend/routes.yaml - FORMATO CORREGIDO
+routes:
+  "/auth/google":
+    controller: "controllers/auth_controller.php"
+    class: "AuthController"
+    method: "google"
+    methods: ["POST"]
+    
+  "/module/activate":
+    controller: "controllers/module_controller.php"
+    class: "ModuleController"
+    method: "activate"
+    methods: ["POST"]
+    
+  "/module/registerUser":
+    controller: "controllers/module_controller.php"
+    class: "ModuleController"
+    method: "registerUser"
+    methods: ["POST"]
+    
+  "/health":
+    controller: "controllers/health_controller.php"
+    class: "HealthController"
+    method: "ping"
+    methods: ["GET"]
+    
+  "/metrics":
+    controller: "controllers/metrics_controller.php"
+    class: "MetricsController"
+    method: "index"
+    methods: ["GET"]
+    
+  # Módulo de prueba Gemini
   "/api/test-gemini/process":
     controller: "controllers/test_gemini_controller.php"
     class: "TestGeminiController"
