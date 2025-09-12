@@ -7,7 +7,8 @@ export async function POST(req: Request, { params }: { params: { action: string 
   if (!BACKEND_URL) {
     return NextResponse.json({ error: 'BACKEND_URL no configurado' }, { status: 500 })
   }
-  const { action } = params
+
+  const { action } = params // "start" | "step" | "generate"
   if (!['start', 'step', 'generate'].includes(action)) {
     return NextResponse.json({ error: 'action inválida' }, { status: 400 })
   }
