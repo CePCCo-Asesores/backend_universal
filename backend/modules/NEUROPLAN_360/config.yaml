@@ -1,0 +1,5 @@
+# Config del módulo NEUROPLAN_360
+defaults:
+  format: practica
+  detalle: estandar
+  rate_limit_per_min: 60
