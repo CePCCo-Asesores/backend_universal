@@ -1,20 +1,24 @@
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { NextResponse, type NextRequest } from 'next/server'
 
-const BACKEND_URL = process.env.BACKEND_URL // ej: https://tu-backend.up.railway.app
+const BACKEND_URL = process.env.BACKEND_URL // ej: https://cepcco-backend-production.up.railway.app
 
-export async function POST(req: Request, { params }: { params: { action: string } }) {
+export async function POST(
+  req: NextRequest,
+  context: { params?: Record<string, string | string[]> }
+) {
   if (!BACKEND_URL) {
     return NextResponse.json({ error: 'BACKEND_URL no configurado' }, { status: 500 })
   }
 
-  const { action } = params // "start" | "step" | "generate"
-  if (!['start', 'step', 'generate'].includes(action)) {
+  const actionParam = context?.params?.action
+  const action = Array.isArray(actionParam) ? actionParam[0] : actionParam
+
+  if (!action || !['start', 'step', 'generate'].includes(action)) {
     return NextResponse.json({ error: 'action inválida' }, { status: 400 })
   }
 
-  const bodyFromClient = await req.json().catch(() => ({}))
-  const jwt = cookies().get('jwt')?.value
+  const bodyFromClient = await req.json().catch(() => ({} as Record<string, unknown>))
+  const jwt = req.cookies.get('jwt')?.value
 
   const upstream = await fetch(`${BACKEND_URL}/module/activate`, {
     method: 'POST',
