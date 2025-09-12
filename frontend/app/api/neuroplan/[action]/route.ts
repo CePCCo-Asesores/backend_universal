@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 
 const BACKEND_URL = process.env.BACKEND_URL // ej: https://cepcco-backend-production.up.railway.app
 
@@ -17,7 +16,14 @@ export async function POST(req: Request) {
   }
 
   const bodyFromClient = await req.json().catch(() => ({} as Record<string, unknown>))
-  const jwt = cookies().get('jwt')?.value
+
+  // Leer cookie "jwt" desde el header (evita tipos de Next 15 en `cookies()`)
+  const cookieHeader = req.headers.get('cookie') ?? ''
+  let jwt: string | undefined
+  for (const part of cookieHeader.split(';')) {
+    const [k, v] = part.split('=')
+    if (k?.trim() === 'jwt') { jwt = decodeURIComponent(v ?? ''); break }
+  }
 
   const upstream = await fetch(`${BACKEND_URL}/module/activate`, {
     method: 'POST',
