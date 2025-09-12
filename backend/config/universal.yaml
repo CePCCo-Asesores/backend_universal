@@ -1,0 +1,7 @@
+environments:
+  development:
+    debug: true
+    database_connections: local
+  production:
+    debug: false
+    database_connections: cloud
