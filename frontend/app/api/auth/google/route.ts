@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 
-const BACKEND_URL = process.env.BACKEND_URL
+const BACKEND_URL = process.env.BACKEND_URL // ej: https://tu-backend.up.railway.app
 
 export async function POST(req: Request) {
   if (!BACKEND_URL) {
     return NextResponse.json({ error: 'BACKEND_URL no configurado' }, { status: 500 })
   }
+
   const body = await req.json().catch(() => ({}))
 
   const upstream = await fetch(`${BACKEND_URL}/auth/google`, {
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
   const token = (data && (data.token || data.jwt)) as string | undefined
 
   const res = NextResponse.json(data, { status: upstream.status })
+
   if (token) {
     res.cookies.set({
       name: 'jwt',
@@ -30,5 +32,6 @@ export async function POST(req: Request) {
       maxAge: 60 * 60 * 24 * 14
     })
   }
+
   return res
 }
