@@ -1,39 +1,33 @@
-type: object
-required: [usuario, neurodiversidades, formato, contexto]
-additionalProperties: false
+# Contrato del módulo NEUROPLAN_360
+# Secciones evaluadas por Services\ContractValidator + Services\ContractGuard
 
-properties:
-  usuario:
-    type: string
-    enum: [docente, terapeuta, padre, medico, otro, mixto]
-  neurodiversidades:
-    type: array
-    minItems: 1
-    items: { type: string }
-  formato:
-    type: string
-    enum: [practico, completo, nd_plus, sensorial, semaforo]
-  contexto:
-    type: object
-    required: [grado, contenido, tema, sesiones, duracion]
-    properties:
-      grado: { type: string, minLength: 1 }
-      contenido: { type: string, minLength: 1 }
-      tema: { type: string, minLength: 1 }
-      sesiones: { type: integer, minimum: 1 }
-      duracion: { type: integer, minimum: 1 }
-  sensibilidades:
-    type: array
-    items: { type: string }
-    default: []
-  entornos:
-    type: array
-    items: { type: string }
-    default: []
-  limitaciones:
-    type: array
-    items: { type: string }
-    default: []
-  prioridad:
-    type: string
-    default: ""
+pre:
+  # Debe existir payload
+  - path: "."
+    op: required
+    message: "payload requerido"
+
+  # Acción válida
+  - path: "action"
+    op: in
+    value: ["start", "step", "generate", "direct"]
+    message: "action inválida (start|step|generate|direct)"
+
+  # NOTA: Reglas condicionales (p.ej. step/session_id solo cuando action=step)
+  # no se expresan aquí para no bloquear otras rutas. Validamos dentro del módulo.
+
+post:
+  # La respuesta debe existir y tener ok=true
+  - path: "."
+    op: required
+    message: "respuesta requerida"
+
+  - path: "ok"
+    op: eq
+    value: true
+    message: "respuesta debe tener ok=true"
+
+invariants:
+  # Invariante mínima: respuesta/estado no vacío
+  - path: "."
+    op: required
