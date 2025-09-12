@@ -31,20 +31,18 @@ routes:
     methods: ["GET"]
     
   # Módulo de prueba Gemini
-  "/api/test-gemini/process":
+  "/test-gemini/process":
     controller: "controllers/test_gemini_controller.php"
     class: "TestGeminiController"
     method: "handleRequest"
     contract: "contracts/test_gemini_contract.php"
     validator: "validators/test_gemini_validator.php"
     methods: ["POST"]
-    description: "Test module for Gemini API integration"
     
-  "/api/test-gemini/health":
+  "/test-gemini/health":
     controller: "controllers/test_gemini_controller.php"
     class: "TestGeminiController"
     method: "healthCheck"
     contract: "contracts/test_gemini_contract.php"
     validator: "validators/test_gemini_validator.php"
     methods: ["GET"]
-    description: "Health check for test Gemini module"
