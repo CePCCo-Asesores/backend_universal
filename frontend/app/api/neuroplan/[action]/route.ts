@@ -1,4 +1,6 @@
-// Opción 2: Versión simplificada sin parámetros dinámicos
+import { NextRequest, NextResponse } from 'next/server';
+
+// Versión simplificada sin parámetros dinámicos
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
