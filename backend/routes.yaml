@@ -15,22 +15,6 @@
   controller: HealthController
   action: ping
 
-/auth/google:
-  controller: AuthController
-  action: google
-
-/module/activate:
-  controller: ModuleController
-  action: activate
-
-/module/registerUser:
-  controller: ModuleController
-  action: registerUser
-
-/health:
-  controller: HealthController
-  action: ping
-
 /metrics:
   controller: MetricsController
   action: index
