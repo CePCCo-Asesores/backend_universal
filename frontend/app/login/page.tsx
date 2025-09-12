@@ -1,50 +1,48 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
-  const [token, setToken] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const sp = useSearchParams()
-  const redirect = sp.get('redirect') || '/neuroplan'
-
-  const submit = async () => {
-    setLoading(true); setError(null)
-    try {
-      const r = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token_google: token })
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j?.error || 'No se pudo autenticar')
-      router.push(redirect)
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
+// Componente que usa useSearchParams
+function LoginForm() {
+  const searchParams = useSearchParams();
+  
+  // Tu lógica del componente login aquí
+  const error = searchParams.get('error');
+  const callbackUrl = searchParams.get('callbackUrl');
+  
   return (
-    <main className="max-w-md mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Login</h1>
-      <p className="text-sm text-gray-600">Pega aquí un <strong>ID token</strong> de Google para pruebas.</p>
+    <div>
+      {error && (
+        <div className="error-message">
+          Error: {error}
+        </div>
+      )}
+      
+      {/* Tu formulario de login */}
+      <form>
+        {/* Tus campos de login */}
+        <input type="email" placeholder="Email" />
+        <input type="password" placeholder="Password" />
+        <button type="submit">Iniciar Sesión</button>
+      </form>
+      
+      {callbackUrl && (
+        <input type="hidden" name="callbackUrl" value={callbackUrl} />
+      )}
+    </div>
+  );
+}
 
-      {error && <div className="p-3 rounded bg-red-100 text-red-800 text-sm">{error}</div>}
-
-      <textarea
-        className="w-full h-32 p-3 border rounded"
-        placeholder="ID token de Google"
-        value={token}
-        onChange={(e) => setToken(e.target.value)}
-      />
-      <button onClick={submit} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50" disabled={loading || !token.trim()}>
-        {loading ? 'Autenticando…' : 'Entrar'}
-      </button>
-    </main>
-  )
+// Página principal
+export default function LoginPage() {
+  return (
+    <div className="login-container">
+      <h1>Iniciar Sesión</h1>
+      
+      <Suspense fallback={<div>Cargando...</div>}>
+        <LoginForm />
+      </Suspense>
+    </div>
+  );
 }
