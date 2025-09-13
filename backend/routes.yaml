@@ -1,31 +1,31 @@
 # backend/routes.yaml - COMPATIBLE con tu index.php
-# Rutas existentes + Sistema de autenticación integrado
+# Sistema completo con autenticación usando tu arquitectura existente
 
 # =================
-# AUTENTICACIÓN (nuevas)
+# AUTENTICACIÓN (usando tu Controllers\AuthController)
 # =================
 "/auth/google":
-  controller: "AuthController"
-  action: "googleAuth"
+  controller: "Controllers\\AuthController"
+  action: "loginConGoogle"
 
 "/auth/google/callback":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "googleCallback"
 
 "/auth/logout":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "logout"
 
 "/auth/me":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "me"
 
 "/auth/status":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "status"
 
 "/auth/usage":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "usage"
 
 # =================
@@ -105,7 +105,7 @@
   action: "healthCheck"
 
 # =================
-# GESTIÓN DE USUARIOS (nuevas)
+# GESTIÓN DE USUARIOS
 # =================
 "/user/api-keys":
   controller: "UserController"
@@ -123,7 +123,7 @@
   authenticated: true
 
 # =================
-# RUTAS TEMPORALES DE SETUP (eliminar después)
+# RUTAS TEMPORALES DE SETUP (eliminar después de confirmar que funciona)
 # =================
 "/setup/database":
   controller: "SetupController"
