@@ -146,10 +146,3 @@
   controller: "PhpInfoController"
   action: "info"
 
-"/auth/google":
-  controller: "AuthController"
-  action: "googleAuth"
-
-"/auth/google/callback":
-  controller: "AuthController"
-  action: "googleCallback"
