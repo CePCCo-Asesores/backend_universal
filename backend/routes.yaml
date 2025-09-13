@@ -5,27 +5,27 @@
 # AUTENTICACIÓN
 # =================
 "/auth/google":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "googleAuth"
 
 "/auth/google/callback":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "googleCallback"
 
 "/auth/logout":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "logout"
 
 "/auth/me":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "me"
 
 "/auth/status":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "status"
 
 "/auth/usage":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "usage"
 
 # =================
