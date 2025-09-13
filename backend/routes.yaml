@@ -77,4 +77,82 @@
   controller: "UniversalController"
   action: "validate"
 
-# ===============
+# =================
+# ADIA (endpoints específicos)
+# =================
+"/adia/generate":
+  controller: "AdiaController"
+  action: "generate"
+
+"/adia/templates":
+  controller: "AdiaController"
+  action: "templates"
+
+"/adia/usage":
+  controller: "AdiaController"
+  action: "usage"
+
+# =================
+# PAGOS / WEBHOOKS
+# =================
+"/payment/webhook/hotmart":
+  controller: "PaymentController"
+  action: "hotmartWebhook"
+
+"/payment/status":
+  controller: "PaymentController"
+  action: "status"
+
+# =================
+# USUARIOS (área autenticada)
+# =================
+"/user/me":
+  controller: "UserController"
+  action: "me"
+  authenticated: true
+
+"/user/usage":
+  controller: "UserController"
+  action: "usage"
+  authenticated: true
+
+"/user/api-keys":
+  controller: "UserController"
+  action: "listApiKeys"
+  authenticated: true
+
+"/user/api-keys/add":
+  controller: "UserController"
+  action: "addApiKey"
+  authenticated: true
+
+"/user/profile":
+  controller: "UserController"
+  action: "getProfile"
+  authenticated: true
+
+# =================
+# RUTAS TEMPORALES DE SETUP (eliminar después)
+# =================
+"/setup/database":
+  controller: "SetupController"
+  action: "initDatabase"
+
+"/setup/health":
+  controller: "SetupController"
+  action: "health"
+
+"/setup/phpinfo":
+  controller: "PhpInfoController"
+  action: "info"
+
+# =================
+# LAB (opcional, para pruebas)
+# =================
+"/_lab/google/auth":
+  controller: "GoogleLabController"
+  action: "auth"
+
+"/_lab/google/callback":
+  controller: "GoogleLabController"
+  action: "callback"
