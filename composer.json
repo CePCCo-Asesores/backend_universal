@@ -1,0 +1,21 @@
+{
+    "name": "cepcco/backend-universal",
+    "description": "Backend universal con autenticación y base de datos",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "."
+        }
+    },
+    "scripts": {
+        "setup-database": "php bin/init_database.php"
+    }
+}
