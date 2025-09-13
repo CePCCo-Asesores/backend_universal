@@ -11,6 +11,50 @@ require_once __DIR__ . '/../utils/database_manager.php';
 
 class AuthController
 {
+    // ==============================
+    // NUEVO: Inicia el flujo OAuth
+    // GET /auth/google
+    // ==============================
+    public function googleAuth(): void
+    {
+        $clientId    = getenv('GOOGLE_CLIENT_ID');
+        $redirectUri = getenv('GOOGLE_REDIRECT_URI') ?: 'https://cepcco-backend-production.up.railway.app/auth/google/callback';
+
+        if (!$clientId || !$redirectUri) {
+            http_response_code(500);
+            echo json_encode([
+                'error'   => 'Faltan variables de entorno requeridas',
+                'missing' => [
+                    'GOOGLE_CLIENT_ID'    => (bool)$clientId,
+                    'GOOGLE_REDIRECT_URI' => (bool)getenv('GOOGLE_REDIRECT_URI'),
+                ],
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        if (session_status() !== \PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+
+        // CSRF state
+        $state = bin2hex(random_bytes(16));
+        $_SESSION['oauth2_state'] = $state;
+
+        $authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
+            'client_id'              => $clientId,
+            'redirect_uri'           => $redirectUri,
+            'response_type'          => 'code',
+            'scope'                  => 'openid email profile',
+            'access_type'            => 'offline',
+            'include_granted_scopes' => 'true',
+            'prompt'                 => 'consent',
+            'state'                  => $state,
+        ]);
+
+        header('Location: ' . $authUrl, true, 302);
+        exit;
+    }
+
     // Tu método existente - SIN CAMBIOS
     public function loginConGoogle(array $input): array
     {
@@ -46,6 +90,15 @@ class AuthController
     public function googleCallback(): void
     {
         try {
+            // === NUEVO: validación de CSRF state ===
+            if (session_status() !== \PHP_SESSION_ACTIVE) { @session_start(); }
+            $state = $_GET['state'] ?? null;
+            if ($state && (!isset($_SESSION['oauth2_state']) || !hash_equals($_SESSION['oauth2_state'], $state))) {
+                throw new \Exception('Parámetro state inválido o ausente');
+            }
+            unset($_SESSION['oauth2_state']);
+            // === FIN ADICIÓN ===
+
             $authCode = $_GET['code'] ?? null;
             
             if (!$authCode) {
