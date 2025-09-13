@@ -12,8 +12,7 @@ require_once __DIR__ . '/../utils/database_manager.php';
 class AuthController
 {
     // ==============================
-    // NUEVO: Inicia el flujo OAuth
-    // GET /auth/google
+    // GET /auth/google → redirige a Google
     // ==============================
     public function googleAuth(): void
     {
@@ -36,9 +35,16 @@ class AuthController
             @session_start();
         }
 
-        // CSRF state
+        // CSRF state (sesión + cookie fallback 10 min)
         $state = bin2hex(random_bytes(16));
         $_SESSION['oauth2_state'] = $state;
+        setcookie('oauth2_state', $state, [
+            'expires'  => time() + 600,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
 
         $authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
             'client_id'              => $clientId,
@@ -90,31 +96,32 @@ class AuthController
     public function googleCallback(): void
     {
         try {
-            // === NUEVO: validación de CSRF state (si venimos de /auth/google) ===
             if (session_status() !== \PHP_SESSION_ACTIVE) { @session_start(); }
-            $state = $_GET['state'] ?? null;
-            if ($state && (!isset($_SESSION['oauth2_state']) || !hash_equals($_SESSION['oauth2_state'], $state))) {
+
+            // Validación de CSRF state (lee de sesión y, si no está, de cookie)
+            $state    = $_GET['state'] ?? null;
+            $expected = $_SESSION['oauth2_state'] ?? ($_COOKIE['oauth2_state'] ?? null);
+            if (!$state || !$expected || !hash_equals($expected, $state)) {
                 throw new \Exception('Parámetro state inválido o ausente');
             }
             unset($_SESSION['oauth2_state']);
-            // === FIN ADICIÓN ===
+            if (isset($_COOKIE['oauth2_state'])) {
+                setcookie('oauth2_state', '', time() - 3600, '/', '', true, true);
+            }
 
             $authCode = $_GET['code'] ?? null;
-            
             if (!$authCode) {
                 throw new \Exception('Código de autorización no recibido');
             }
             
             // Intercambiar código por token
             $tokenData = $this->exchangeCodeForToken($authCode);
-            
             if (!$tokenData || !isset($tokenData['id_token'])) {
                 throw new \Exception('No se pudo obtener ID token de Google');
             }
             
             // Validar ID token usando tu servicio existente
             $perfil = GoogleAuthService::validate($tokenData['id_token']);
-            
             if (!$perfil) {
                 throw new \Exception('ID token inválido');
             }
@@ -127,11 +134,11 @@ class AuthController
             
             // Generar JWT usando tu servicio existente
             $jwtToken = JwtService::generate([
-                'user_id' => $user['id'],
-                'sub' => $perfil['sub'],
-                'email' => $perfil['email'],
+                'user_id'   => $user['id'],
+                'sub'       => $perfil['sub'],
+                'email'     => $perfil['email'],
                 'tenant_id' => $user['tenant_id'],
-                'plan' => $user['plan']
+                'plan'      => $user['plan']
             ], 24 * 60 * 60); // 24 horas
             
             // Crear sesión en base de datos
@@ -139,10 +146,10 @@ class AuthController
             
             // Establecer cookie segura
             setcookie('auth_token', $jwtToken, [
-                'expires' => time() + (24 * 60 * 60),
-                'path' => '/',
-                'domain' => '',
-                'secure' => true,
+                'expires'  => time() + (24 * 60 * 60),
+                'path'     => '/',
+                'domain'   => '',
+                'secure'   => true,
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]);
@@ -232,16 +239,16 @@ class AuthController
             
             echo json_encode([
                 'authenticated' => $user !== null,
-                'user_id' => $user['id'] ?? null,
-                'email' => $user['email'] ?? null,
-                'plan' => $user['plan'] ?? null,
-                'tenant_id' => $user['tenant_id'] ?? null
+                'user_id'       => $user['id'] ?? null,
+                'email'         => $user['email'] ?? null,
+                'plan'          => $user['plan'] ?? null,
+                'tenant_id'     => $user['tenant_id'] ?? null
             ]);
             
         } catch (\Exception $e) {
             echo json_encode([
                 'authenticated' => false,
-                'error' => $e->getMessage()
+                'error'         => $e->getMessage()
             ]);
         }
     }
@@ -279,217 +286,34 @@ class AuthController
             
             // Límites por plan
             $planLimits = [
-                'basic' => 50,
-                'pro' => 1000,
+                'basic'      => 50,
+                'pro'        => 1000,
                 'enterprise' => PHP_INT_MAX
             ];
             
             $dailyLimit = $planLimits[$user['plan']] ?? $planLimits['basic'];
             
             echo json_encode([
-                'daily_usage' => intval($dailyUsage),
-                'daily_limit' => $dailyLimit,
-                'monthly_usage' => intval($monthlyUsage),
+                'daily_usage'     => intval($dailyUsage),
+                'daily_limit'     => $dailyLimit,
+                'monthly_usage'   => intval($monthlyUsage),
                 'assistant_usage' => $assistantUsage,
-                'plan' => $user['plan'],
+                'plan'            => $user['plan'],
                 'remaining_today' => max(0, $dailyLimit - $dailyUsage)
             ]);
             
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode([
-                'error' => 'Error obteniendo estadísticas',
+                'error'   => 'Error obteniendo estadísticas',
                 'message' => $e->getMessage()
             ]);
         }
     }
     
+    // ==========================
     // MÉTODOS PRIVADOS DE APOYO
+    // ==========================
     
     private function exchangeCodeForToken(string $authCode): ?array
     {
-        $clientId = getenv('GOOGLE_CLIENT_ID');
-        $clientSecret = getenv('GOOGLE_CLIENT_SECRET');
-        $redirectUri = getenv('GOOGLE_REDIRECT_URI') ?: 'https://tu-backend.up.railway.app/auth/google/callback';
-        
-        $postData = [
-            'client_id' => $clientId,
-            'client_secret' => $clientSecret,
-            'code' => $authCode,
-            'grant_type' => 'authorization_code',
-            'redirect_uri' => $redirectUri
-        ];
-        
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://oauth2.googleapis.com/token',
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($postData),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-            CURLOPT_TIMEOUT => 30
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode !== 200) {
-            throw new \Exception("Error obteniendo token de Google: HTTP {$httpCode}");
-        }
-        
-        return json_decode($response, true);
-    }
-    
-    private function getGoogleUserInfo(string $accessToken): ?array
-    {
-        if (empty($accessToken)) return null;
-        
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://www.googleapis.com/oauth2/v2/userinfo',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ["Authorization: Bearer {$accessToken}"],
-            CURLOPT_TIMEOUT => 30
-        ]);
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode !== 200) {
-            return null; // No es crítico si no obtenemos info adicional
-        }
-        
-        return json_decode($response, true);
-    }
-    
-    private function createOrUpdateUser(array $perfil, ?array $userInfo): array
-    {
-        $existingUser = \DatabaseManager::fetchOne(
-            "SELECT * FROM users WHERE google_id = ? OR email = ?",
-            [$perfil['sub'], $perfil['email']]
-        );
-        
-        $userData = [
-            'email' => $perfil['email'],
-            'google_id' => $perfil['sub'],
-            'name' => $userInfo['name'] ?? '',
-            'avatar_url' => $userInfo['picture'] ?? null,
-            'last_login' => date('Y-m-d H:i:s')
-        ];
-        
-        if ($existingUser) {
-            // Actualizar usuario existente
-            \DatabaseManager::update(
-                'users',
-                $userData,
-                'id = ?',
-                [$existingUser['id']]
-            );
-            $userId = $existingUser['id'];
-        } else {
-            // Crear nuevo usuario
-            $userData['tenant_id'] = $this->determineTenantId();
-            $userId = \DatabaseManager::insert('users', $userData);
-        }
-        
-        // Retornar datos completos del usuario
-        return \DatabaseManager::fetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
-    }
-    
-    private function determineTenantId(): string
-    {
-        $host = $_SERVER['HTTP_HOST'] ?? '';
-        
-        // Mapear dominios a tenants
-        $tenantMap = [
-            'empresa-a.com' => 'empresa_a',
-            'startup-b.com' => 'startup_b',
-            // Agregar más mappings según sea necesario
-        ];
-        
-        return $tenantMap[$host] ?? 'default';
-    }
-    
-    private function createSession(int $userId, string $token): int
-    {
-        return \DatabaseManager::insert('user_sessions', [
-            'user_id' => $userId,
-            'token' => $token,
-            'expires_at' => date('Y-m-d H:i:s', time() + (24 * 60 * 60)),
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null
-        ]);
-    }
-    
-    private function getTokenFromRequest(): ?string
-    {
-        // Desde header Authorization
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            return $matches[1];
-        }
-        
-        // Desde cookie
-        return $_COOKIE['auth_token'] ?? null;
-    }
-    
-    private function getCurrentUser(): ?array
-    {
-        $token = $this->getTokenFromRequest();
-        
-        if (!$token) {
-            return null;
-        }
-        
-        // Validar JWT usando tu servicio existente
-        $payload = JwtService::validate($token);
-        
-        if (!$payload) {
-            return null;
-        }
-        
-        // Verificar que la sesión existe y no ha expirado
-        $session = \DatabaseManager::fetchOne(
-            "SELECT * FROM user_sessions WHERE token = ? AND expires_at > NOW()",
-            [$token]
-        );
-        
-        if (!$session) {
-            return null;
-        }
-        
-        return \DatabaseManager::fetchOne("SELECT * FROM users WHERE id = ?", [$payload['user_id']]);
-    }
-    
-    private function requireAuth(): array
-    {
-        $user = $this->getCurrentUser();
-        
-        if (!$user) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Token de autenticación requerido']);
-            exit;
-        }
-        
-        if ($user['status'] !== 'active') {
-            http_response_code(401);
-            echo json_encode(['error' => 'Usuario no activo']);
-            exit;
-        }
-        
-        return $user;
-    }
-}
-
-// ==============================
-// Alias global (para routers sin namespaces).
-// No cambia tu lógica; solo permite usar controller: "AuthController"
-// en routes.yaml si tu autoloader no resuelve namespaces.
-// ==============================
-namespace {
-    if (!class_exists('AuthController', false)) {
-        class_alias(\Controllers\AuthController::class, 'AuthController');
-    }
-}
