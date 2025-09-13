@@ -6,7 +6,7 @@
 # =================
 "/auth/google":
   controller: "AuthController"
-  action: "google"
+  action: "googleAuth"
 
 "/auth/google/callback":
   controller: "AuthController"
