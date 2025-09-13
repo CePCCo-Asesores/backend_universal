@@ -21,7 +21,7 @@
   action: "me"
 
 "/auth/status":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "status"
 
 "/auth/usage":
