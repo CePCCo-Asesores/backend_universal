@@ -1,8 +1,36 @@
 # backend/routes.yaml - COMPATIBLE con tu index.php
+# Rutas existentes + Sistema de autenticación integrado
+
+# =================
+# AUTENTICACIÓN (nuevas)
+# =================
 "/auth/google":
   controller: "AuthController"
   action: "google"
 
+"/auth/google/callback":
+  controller: "AuthController"
+  action: "googleCallback"
+
+"/auth/logout":
+  controller: "AuthController"
+  action: "logout"
+
+"/auth/me":
+  controller: "AuthController"
+  action: "me"
+
+"/auth/status":
+  controller: "AuthController"
+  action: "status"
+
+"/auth/usage":
+  controller: "AuthController"
+  action: "usage"
+
+# =================
+# MÓDULOS EXISTENTES
+# =================
 "/module/activate":
   controller: "ModuleController"
   action: "activate"
@@ -11,14 +39,24 @@
   controller: "ModuleController"
   action: "registerUser"
 
+# =================
+# HEALTH & METRICS (públicas)
+# =================
 "/health":
   controller: "HealthController"
   action: "ping"
+
+"/health/database":
+  controller: "HealthController"
+  action: "databaseHealth"
 
 "/metrics":
   controller: "MetricsController"
   action: "index"
 
+# =================
+# GEMINI (con autenticación opcional)
+# =================
 # Módulo de prueba Gemini - FORMATO CORRECTO
 "/test-gemini/health":
   controller: "TestGeminiController"
@@ -27,11 +65,13 @@
 "/test-gemini/process":
   controller: "TestGeminiController"
   action: "handleRequest"
+  authenticated: true  # Requerir autenticación
 
-  # Módulo Gemini Real
+# Módulo Gemini Real
 "/gemini/generate":
   controller: "GeminiController"
   action: "generateText"
+  authenticated: true  # Requerir autenticación
 
 "/gemini/health":
   controller: "GeminiController"
@@ -40,27 +80,44 @@
 "/gemini/models":
   controller: "GeminiController"
   action: "listModels"
+  authenticated: true  # Requerir autenticación
 
-  # Módulo Universal de Asistentes
+# =================
+# ASISTENTE UNIVERSAL (con autenticación)
+# =================
 "/assistant/execute":
   controller: "AssistantController"
   action: "execute"
+  authenticated: true  # Requerir autenticación
 
 "/assistant/list":
   controller: "AssistantController"
   action: "listAssistants"
+  authenticated: true  # Requerir autenticación
 
 "/assistant/ui-config":
   controller: "AssistantController"
   action: "getUIConfig"
+  authenticated: true  # Requerir autenticación
 
 "/assistant/health":
   controller: "AssistantController"
   action: "healthCheck"
 
+# =================
+# GESTIÓN DE USUARIOS (nuevas)
+# =================
+"/user/api-keys":
+  controller: "UserController"
+  action: "listApiKeys"
+  authenticated: true
 
+"/user/api-keys/add":
+  controller: "UserController"
+  action: "addApiKey"
+  authenticated: true
 
-
-
-
-
+"/user/profile":
+  controller: "UserController"
+  action: "getProfile"
+  authenticated: true
