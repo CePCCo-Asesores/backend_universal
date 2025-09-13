@@ -9,7 +9,8 @@
         "ext-pgsql": "*",
         "ext-curl": "*",
         "ext-json": "*",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "symfony/yaml": "^6.0"
     },
     "config": {
         "platform": {
