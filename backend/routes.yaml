@@ -121,3 +121,16 @@
   controller: "UserController"
   action: "getProfile"
   authenticated: true
+
+  # Rutas temporales de setup (eliminar después)
+"/setup/database":
+  controller: "SetupController"
+  action: "initDatabase"
+
+"/setup/health":
+  controller: "SetupController"
+  action: "health"
+
+"/setup/test-auth":
+  controller: "SetupController"
+  action: "testAuth"
