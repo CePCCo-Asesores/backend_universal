@@ -27,3 +27,16 @@
 "/test-gemini/process":
   controller: "TestGeminiController"
   action: "handleRequest"
+
+  # Módulo Gemini Real
+"/gemini/generate":
+  controller: "GeminiController"
+  action: "generateText"
+
+"/gemini/health":
+  controller: "GeminiController"
+  action: "healthCheck"
+
+"/gemini/models":
+  controller: "GeminiController"
+  action: "listModels"
