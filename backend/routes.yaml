@@ -156,3 +156,23 @@
 "/_lab/google/callback":
   controller: "GoogleLabController"
   action: "callback"
+
+  # backend/routes.yaml
+
+"/auth/google":
+  controller: "AuthController"
+  action: "googleAuth"
+
+"/auth/google/callback":
+  controller: "AuthController"
+  action: "googleCallback"
+
+# Diagnóstico (bórralos luego si quieres)
+"/auth/google/ping":
+  controller: "AuthController"
+  action: "googlePing"
+
+"/auth/google/diag":
+  controller: "AuthController"
+  action: "googleDiag"
+
