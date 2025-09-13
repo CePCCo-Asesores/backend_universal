@@ -65,13 +65,13 @@
 "/test-gemini/process":
   controller: "TestGeminiController"
   action: "handleRequest"
-  authenticated: true  # Requerir autenticación
+  authenticated: true
 
 # Módulo Gemini Real
 "/gemini/generate":
   controller: "GeminiController"
   action: "generateText"
-  authenticated: true  # Requerir autenticación
+  authenticated: true
 
 "/gemini/health":
   controller: "GeminiController"
@@ -80,7 +80,7 @@
 "/gemini/models":
   controller: "GeminiController"
   action: "listModels"
-  authenticated: true  # Requerir autenticación
+  authenticated: true
 
 # =================
 # ASISTENTE UNIVERSAL (con autenticación)
@@ -88,17 +88,17 @@
 "/assistant/execute":
   controller: "AssistantController"
   action: "execute"
-  authenticated: true  # Requerir autenticación
+  authenticated: true
 
 "/assistant/list":
   controller: "AssistantController"
   action: "listAssistants"
-  authenticated: true  # Requerir autenticación
+  authenticated: true
 
 "/assistant/ui-config":
   controller: "AssistantController"
   action: "getUIConfig"
-  authenticated: true  # Requerir autenticación
+  authenticated: true
 
 "/assistant/health":
   controller: "AssistantController"
@@ -122,7 +122,9 @@
   action: "getProfile"
   authenticated: true
 
-  # Rutas temporales de setup (eliminar después)
+# =================
+# RUTAS TEMPORALES DE SETUP (eliminar después)
+# =================
 "/setup/database":
   controller: "SetupController"
   action: "initDatabase"
@@ -130,18 +132,6 @@
 "/setup/health":
   controller: "SetupController"
   action: "health"
-
-"/setup/test-auth":
-  controller: "SetupController"
-  action: "testAuth"
-
- "/setup/test-auth":
-  controller: "SetupController"
-  action: "testAuth"
-
-"/setup/test-auth":
-  controller: "SetupController"
-  action: "testAuth"
 
 "/setup/phpinfo":
   controller: "PhpInfoController"
