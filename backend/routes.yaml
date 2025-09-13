@@ -58,19 +58,9 @@
   controller: "AssistantController"
   action: "healthCheck"
 
-  # Sistema Universal de Asistentes
-"/assistant/execute":
-  controller: "AssistantController"
-  action: "execute"
 
-"/assistant/list":
-  controller: "AssistantController"
-  action: "listAssistants"
 
-"/assistant/ui-config":
-  controller: "AssistantController"
-  action: "getUIConfig"
 
-"/assistant/health":
-  controller: "AssistantController"
-  action: "healthCheck"
+
+
+
