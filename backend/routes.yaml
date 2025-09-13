@@ -145,3 +145,12 @@
 "/setup/phpinfo":
   controller: "PhpInfoController"
   action: "info"
+
+  "/auth/google":
+  controller: "Controllers\\AuthController"
+  action: "googleAuth"
+
+"/auth/google/callback":
+  controller: "Controllers\\AuthController"
+  action: "googleCallback"
+
