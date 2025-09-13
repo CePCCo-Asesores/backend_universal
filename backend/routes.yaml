@@ -1,23 +1,23 @@
 # backend/routes.yaml - COMPATIBLE con tu index.php
-# Sistema completo con autenticación usando tu arquitectura existente
+# Rutas existentes + Sistema de autenticación integrado
 
 # =================
-# AUTENTICACIÓN (usando tu Controllers\AuthController)
+# AUTENTICACIÓN (nuevas)
 # =================
 "/auth/google":
-  controller: "Controllers\\AuthController"
-  action: "loginConGoogle"
+  controller: "AuthController"
+  action: "googleAuth"
 
 "/auth/google/callback":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "googleCallback"
 
 "/auth/logout":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "logout"
 
 "/auth/me":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "me"
 
 "/auth/status":
@@ -25,7 +25,7 @@
   action: "status"
 
 "/auth/usage":
-  controller: "Controllers\\AuthController"
+  controller: "AuthController"
   action: "usage"
 
 # =================
@@ -48,65 +48,74 @@
 
 "/health/database":
   controller: "HealthController"
-  action: "databaseHealth"
+  action: "database"
+
+"/health/cache":
+  controller: "HealthController"
+  action: "cache"
 
 "/metrics":
   controller: "MetricsController"
-  action: "index"
+  action: "summary"
 
 # =================
-# GEMINI (con autenticación opcional)
+# UNIVERSAL ENGINE (contratos y ejecución)
 # =================
-# Módulo de prueba Gemini - FORMATO CORRECTO
-"/test-gemini/health":
-  controller: "TestGeminiController"
-  action: "healthCheck"
+"/universal/activate":
+  controller: "UniversalController"
+  action: "activate"
 
-"/test-gemini/process":
-  controller: "TestGeminiController"
-  action: "handleRequest"
-  authenticated: true
+"/universal/run":
+  controller: "UniversalController"
+  action: "run"
 
-# Módulo Gemini Real
-"/gemini/generate":
-  controller: "GeminiController"
-  action: "generateText"
-  authenticated: true
+"/universal/contracts":
+  controller: "UniversalController"
+  action: "listContracts"
 
-"/gemini/health":
-  controller: "GeminiController"
-  action: "healthCheck"
-
-"/gemini/models":
-  controller: "GeminiController"
-  action: "listModels"
-  authenticated: true
+"/universal/validate":
+  controller: "UniversalController"
+  action: "validate"
 
 # =================
-# ASISTENTE UNIVERSAL (con autenticación)
+# ADIA (endpoints específicos)
 # =================
-"/assistant/execute":
-  controller: "AssistantController"
-  action: "execute"
-  authenticated: true
+"/adia/generate":
+  controller: "AdiaController"
+  action: "generate"
 
-"/assistant/list":
-  controller: "AssistantController"
-  action: "listAssistants"
-  authenticated: true
+"/adia/templates":
+  controller: "AdiaController"
+  action: "templates"
 
-"/assistant/ui-config":
-  controller: "AssistantController"
-  action: "getUIConfig"
-  authenticated: true
-
-"/assistant/health":
-  controller: "AssistantController"
-  action: "healthCheck"
+"/adia/usage":
+  controller: "AdiaController"
+  action: "usage"
 
 # =================
-# GESTIÓN DE USUARIOS
+# PAGOS / WEBHOOKS
 # =================
+"/payment/webhook/hotmart":
+  controller: "PaymentController"
+  action: "hotmartWebhook"
+
+"/payment/status":
+  controller: "PaymentController"
+  action: "status"
+
+# =================
+# USUARIOS (área autenticada)
+# =================
+"/user/me":
+  controller: "UserController"
+  action: "me"
+  authenticated: true
+
+"/user/usage":
+  controller: "UserController"
+  action: "usage"
+  authenticated: true
+
 "/user/api-keys":
   controller: "UserController"
   action: "listApiKeys"
@@ -123,7 +132,7 @@
   authenticated: true
 
 # =================
-# RUTAS TEMPORALES DE SETUP (eliminar después de confirmar que funciona)
+# RUTAS TEMPORALES DE SETUP (eliminar después)
 # =================
 "/setup/database":
   controller: "SetupController"
