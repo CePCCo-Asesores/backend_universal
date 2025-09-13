@@ -135,6 +135,14 @@
   controller: "SetupController"
   action: "testAuth"
 
-  "/setup/phpinfo":
+ "/setup/test-auth":
+  controller: "SetupController"
+  action: "testAuth"
+
+"/setup/test-auth":
+  controller: "SetupController"
+  action: "testAuth"
+
+"/setup/phpinfo":
   controller: "PhpInfoController"
   action: "info"
