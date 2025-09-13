@@ -2,30 +2,30 @@
 # Rutas existentes + Sistema de autenticación integrado
 
 # =================
-# AUTENTICACIÓN (nuevas)
+# AUTENTICACIÓN
 # =================
 "/auth/google":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "googleAuth"
 
 "/auth/google/callback":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "googleCallback"
 
 "/auth/logout":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "logout"
 
 "/auth/me":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "me"
 
 "/auth/status":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "status"
 
 "/auth/usage":
-  controller: "AuthController"
+  controller: "Controllers\\AuthController"
   action: "usage"
 
 # =================
@@ -145,12 +145,3 @@
 "/setup/phpinfo":
   controller: "PhpInfoController"
   action: "info"
-
-  "/auth/google":
-  controller: "Controllers\\AuthController"
-  action: "googleAuth"
-
-"/auth/google/callback":
-  controller: "Controllers\\AuthController"
-  action: "googleCallback"
-
