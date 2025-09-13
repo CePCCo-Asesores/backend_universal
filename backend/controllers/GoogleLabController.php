@@ -1,22 +1,14 @@
 <?php
 /**
- * Módulo de laboratorio para probar Google OAuth sin DB y sin dependencias.
- * Usa variables LAB_* para no chocar con las reales.
+ * Módulo LAB para probar Google OAuth sin DB.
+ * Usa variables LAB_* y guarda el state en sesión y cookie (fallback).
  *
  * Rutas:
- *   GET /_lab/google/auth        → Redirige a Google
- *   GET /_lab/google/callback    → Procesa el callback y muestra JSON con el perfil
- *
- * Variables requeridas (Railway → Variables):
- *   LAB_GOOGLE_CLIENT_ID
- *   LAB_GOOGLE_CLIENT_SECRET
- *   LAB_GOOGLE_REDIRECT_URI   (ej: https://TU_BACKEND/_lab/google/callback)
+ *   GET /_lab/google/auth
+ *   GET /_lab/google/callback
  */
-
 class GoogleLabController
 {
-    /* ===== Helpers ===== */
-
     private function json(int $status, array $payload): void {
         if (!headers_sent()) {
             http_response_code($status);
@@ -108,8 +100,6 @@ class GoogleLabController
         if ($missing) $this->json(500, ['error'=>'Faltan variables de entorno', 'missing'=>$missing]);
     }
 
-    /* ===== Acciones ===== */
-
     // GET /_lab/google/auth
     public function auth(): void {
         $this->ensureEnv(['LAB_GOOGLE_CLIENT_ID','LAB_GOOGLE_REDIRECT_URI']);
@@ -117,6 +107,13 @@ class GoogleLabController
 
         $state = bin2hex(random_bytes(16));
         $_SESSION['lab_oauth2_state'] = $state;
+        setcookie('lab_oauth2_state', $state, [
+            'expires'  => time() + 600,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
 
         $authUrl = $this->buildUrl('https://accounts.google.com/o/oauth2/v2/auth', [
             'client_id'              => $this->env('LAB_GOOGLE_CLIENT_ID'),
@@ -137,10 +134,14 @@ class GoogleLabController
         $this->startSession();
 
         $state = $_GET['state'] ?? null;
-        if (!$state || !isset($_SESSION['lab_oauth2_state']) || !hash_equals($_SESSION['lab_oauth2_state'], $state)) {
+        $expected = $_SESSION['lab_oauth2_state'] ?? ($_COOKIE['lab_oauth2_state'] ?? null);
+        if (!$state || !$expected || !hash_equals($expected, $state)) {
             $this->json(400, ['error'=>'state inválido o ausente']);
         }
         unset($_SESSION['lab_oauth2_state']);
+        if (isset($_COOKIE['lab_oauth2_state'])) {
+            setcookie('lab_oauth2_state', '', time() - 3600, '/', '', true, true);
+        }
 
         $code = $_GET['code'] ?? null;
         if (!$code) $this->json(400, ['error'=>'code ausente']);
@@ -168,7 +169,6 @@ class GoogleLabController
             $this->json(401, ['error'=>'id_token inválido (aud no coincide)', 'claims'=>$claims]);
         }
 
-        // Respuesta de prueba (no guarda en DB)
         $this->json(200, [
             'status'  => 'ok',
             'profile' => [
@@ -178,7 +178,6 @@ class GoogleLabController
                 'name'           => $claims['name'] ?? ($claims['given_name'] ?? null),
                 'picture'        => $claims['picture'] ?? null,
             ],
-            // tokens devueltos para inspección rápida (evita imprimir refresh_token en producción)
             'tokens'  => [
                 'id_token'      => $tok['id_token'],
                 'access_token'  => $tok['access_token'] ?? null,
