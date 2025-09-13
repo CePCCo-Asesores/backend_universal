@@ -1,0 +1,232 @@
+<?php
+/**
+ * 📁 backend/controllers/authenticated_base_controller.php
+ * Controlador base que requiere autenticación para todos los asistentes
+ */
+
+require_once 'utils/auth_manager.php';
+require_once 'utils/database_manager.php';
+
+abstract class AuthenticatedBaseController {
+    
+    protected $authManager;
+    protected $currentUser;
+    protected $requestData;
+    
+    public function __construct() {
+        $this->authManager = new AuthManager();
+        $this->currentUser = $this->authManager->requireAuth();
+        $this->requestData = $this->parseRequestData();
+        
+        // Verificar límites de uso
+        $this->checkUsageLimits();
+    }
+    
+    /**
+     * Parsea datos de la request (GET/POST/JSON)
+     */
+    private function parseRequestData() {
+        $data = [];
+        
+        // Datos GET
+        $data = array_merge($data, $_GET);
+        
+        // Datos POST
+        $data = array_merge($data, $_POST);
+        
+        // JSON en el body
+        $jsonInput = file_get_contents('php://input');
+        if ($jsonInput) {
+            $jsonData = json_decode($jsonInput, true);
+            if ($jsonData) {
+                $data = array_merge($data, $jsonData);
+            }
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Verifica límites de uso del usuario
+     */
+    private function checkUsageLimits() {
+        $canUse = $this->authManager->checkUserLimits($this->currentUser['id'], $this->getAssistantId());
+        
+        if (!$canUse) {
+            http_response_code(429);
+            echo json_encode([
+                'error' => 'Límite de uso diario alcanzado',
+                'message' => 'Has superado el límite de tu plan. Upgradeate para más uso.',
+                'current_plan' => $this->currentUser['plan'],
+                'upgrade_url' => '/auth/upgrade'
+            ]);
+            exit;
+        }
+    }
+    
+    /**
+     * Registra el uso del asistente
+     */
+    protected function logUsage($inputData, $outputData, $tokensUsed = 0, $processingTime = 0, $success = true, $errorMessage = null) {
+        return $this->authManager->logAssistantUsage(
+            $this->currentUser['id'],
+            $this->getAssistantId(),
+            $inputData,
+            $outputData,
+            $tokensUsed,
+            $processingTime,
+            $success,
+            $errorMessage
+        );
+    }
+    
+    /**
+     * Obtiene API key del usuario para el servicio específico
+     */
+    protected function getUserApiKey($service) {
+        $apiKey = DatabaseManager::fetchOne(
+            "SELECT api_key FROM user_api_keys WHERE user_id = ? AND service = ? AND is_active = true",
+            [$this->currentUser['id'], $service]
+        );
+        
+        if (!$apiKey) {
+            // Intentar obtener API key global si no tiene personalizada
+            return $this->getGlobalApiKey($service);
+        }
+        
+        return $apiKey['api_key'];
+    }
+    
+    /**
+     * Obtiene API key global (fallback)
+     */
+    private function getGlobalApiKey($service) {
+        $keyMap = [
+            'openai' => getenv('OPENAI_API_KEY'),
+            'anthropic' => getenv('ANTHROPIC_API_KEY'),
+            'google' => getenv('GOOGLE_AI_API_KEY'),
+            'perplexity' => getenv('PERPLEXITY_API_KEY'),
+            'groq' => getenv('GROQ_API_KEY'),
+            'deepseek' => getenv('DEEPSEEK_API_KEY'),
+            'cohere' => getenv('COHERE_API_KEY'),
+            'huggingface' => getenv('HUGGINGFACE_API_KEY')
+        ];
+        
+        return $keyMap[$service] ?? null;
+    }
+    
+    /**
+     * Respuesta exitosa estándar
+     */
+    protected function successResponse($data, $processingTime = 0) {
+        $startTime = microtime(true);
+        
+        // Registrar uso exitoso
+        $this->logUsage(
+            $this->requestData,
+            $data,
+            $this->estimateTokens($data),
+            $processingTime,
+            true
+        );
+        
+        $response = [
+            'success' => true,
+            'data' => $data,
+            'user' => [
+                'id' => $this->currentUser['id'],
+                'email' => $this->currentUser['email'],
+                'plan' => $this->currentUser['plan']
+            ],
+            'assistant' => $this->getAssistantId(),
+            'processing_time' => $processingTime,
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+        
+        echo json_encode($response);
+    }
+    
+    /**
+     * Respuesta de error estándar
+     */
+    protected function errorResponse($message, $httpCode = 500, $details = null) {
+        http_response_code($httpCode);
+        
+        // Registrar uso fallido
+        $this->logUsage(
+            $this->requestData,
+            null,
+            0,
+            0,
+            false,
+            $message
+        );
+        
+        $response = [
+            'success' => false,
+            'error' => $message,
+            'user' => [
+                'id' => $this->currentUser['id'],
+                'plan' => $this->currentUser['plan']
+            ],
+            'assistant' => $this->getAssistantId(),
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+        
+        if ($details) {
+            $response['details'] = $details;
+        }
+        
+        echo json_encode($response);
+    }
+    
+    /**
+     * Estima tokens usados (aproximación simple)
+     */
+    private function estimateTokens($data) {
+        if (is_array($data)) {
+            $text = json_encode($data);
+        } else {
+            $text = (string) $data;
+        }
+        
+        // Aproximación: 4 caracteres = 1 token
+        return ceil(strlen($text) / 4);
+    }
+    
+    /**
+     * Obtiene datos de la request
+     */
+    protected function getRequestData() {
+        return $this->requestData;
+    }
+    
+    /**
+     * Obtiene usuario actual
+     */
+    protected function getCurrentUser() {
+        return $this->currentUser;
+    }
+    
+    /**
+     * Valida parámetros requeridos
+     */
+    protected function validateRequired($fields) {
+        foreach ($fields as $field) {
+            if (!isset($this->requestData[$field]) || empty($this->requestData[$field])) {
+                $this->errorResponse("Campo requerido: {$field}", 400);
+                exit;
+            }
+        }
+    }
+    
+    /**
+     * Obtiene ID del asistente (debe ser implementado por cada controlador)
+     */
+    abstract protected function getAssistantId();
+    
+    /**
+     * Procesa la request del asistente (debe ser implementado por cada controlador)
+     */
+    abstract public function processRequest();
+}
