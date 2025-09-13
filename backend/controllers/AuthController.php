@@ -281,7 +281,7 @@ class AuthController
             $planLimits = [
                 'basic' => 50,
                 'pro' => 1000,
-                'enterprise' => PHP_INT_MAX
+                'enterprise' => \PHP_INT_MAX
             ];
             
             $dailyLimit = $planLimits[$user['plan']] ?? $planLimits['basic'];
@@ -480,5 +480,15 @@ class AuthController
         }
         
         return $user;
+    }
+}
+
+// ==============================
+// Alias global para autoload sin namespaces:
+// permite usar controller: "AuthController" en routes.yaml
+// ==============================
+namespace {
+    if (!class_exists('AuthController', false)) {
+        class_alias(\Controllers\AuthController::class, 'AuthController');
     }
 }
