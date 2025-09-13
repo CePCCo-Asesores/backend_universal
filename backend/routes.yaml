@@ -146,3 +146,12 @@
   controller: "PhpInfoController"
   action: "info"
 
+  "/_lab/google/auth":
+  controller: "GoogleLabController"
+  action: "auth"
+
+"/_lab/google/callback":
+  controller: "GoogleLabController"
+  action: "callback"
+
+
