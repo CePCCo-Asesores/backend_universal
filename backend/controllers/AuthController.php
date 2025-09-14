@@ -38,7 +38,7 @@ if (is_file($__dm)) {
 class AuthController
 {
     // ==============================
-    // DIAGNÓSTICO (si no los usas, puedes quitar las rutas)
+    // DIAGNÓSTICO
     // ==============================
     public function googlePing(): void
     {
@@ -55,13 +55,13 @@ class AuthController
 
     public function googleDiag(): void
     {
+        $redirectUri = $this->effectiveRedirectUri();
         $env = [
             'GOOGLE_CLIENT_ID'     => (\getenv('GOOGLE_CLIENT_ID')     !== false && \getenv('GOOGLE_CLIENT_ID')     !== ''),
             'GOOGLE_CLIENT_SECRET' => (\getenv('GOOGLE_CLIENT_SECRET') !== false && \getenv('GOOGLE_CLIENT_SECRET') !== ''),
             'GOOGLE_REDIRECT_URI'  => (\getenv('GOOGLE_REDIRECT_URI')  !== false && \getenv('GOOGLE_REDIRECT_URI')  !== ''),
             'FRONTEND_URL'         => (\getenv('FRONTEND_URL')         !== false && \getenv('FRONTEND_URL')         !== ''),
         ];
-        $redirectUri = \getenv('GOOGLE_REDIRECT_URI') ?: 'https://cepcco-backend-production.up.railway.app/auth/google/callback';
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
@@ -82,7 +82,7 @@ class AuthController
     public function googleAuth(): void
     {
         $clientId    = \getenv('GOOGLE_CLIENT_ID');
-        $redirectUri = \getenv('GOOGLE_REDIRECT_URI') ?: 'https://cepcco-backend-production.up.railway.app/auth/google/callback';
+        $redirectUri = $this->effectiveRedirectUri(); // <— SIEMPRE coherente con el dominio actual
 
         if (!$clientId || !$redirectUri) {
             http_response_code(500);
@@ -93,6 +93,7 @@ class AuthController
                     'GOOGLE_CLIENT_ID'    => (bool)$clientId,
                     'GOOGLE_REDIRECT_URI' => (bool)\getenv('GOOGLE_REDIRECT_URI'),
                 ],
+                'effective_redirect_uri' => $redirectUri,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
         }
@@ -166,7 +167,7 @@ class AuthController
             // Validación de CSRF state (sesión + cookie)
             $state    = $_GET['state'] ?? null;
             $expected = $_SESSION['oauth2_state'] ?? ($_COOKIE['oauth2_state'] ?? null);
-            if (!$state || !$expected || !\hash_equals($expected, $state)) {
+            if (!$state || !$expected || !\hash_equals((string)$expected, (string)$state)) {
                 throw new \Exception('Parámetro state inválido o ausente');
             }
             unset($_SESSION['oauth2_state']);
@@ -215,15 +216,17 @@ class AuthController
                 'samesite' => 'Lax'
             ]);
 
-            // Redirigir al frontend
+            // Redirigir al frontend (universal)
             $frontendUrl = \getenv('FRONTEND_URL') ?: 'https://tu-frontend.com';
-            header("Location: {$frontendUrl}/#/dashboard?auth=success");
+            $afterOk  = \getenv('FRONTEND_AFTER_LOGIN_PATH')       ?: '/#/dashboard';
+            header("Location: {$frontendUrl}{$afterOk}?auth=success");
             exit;
 
         } catch (\Exception $e) {
             error_log('Google callback error: ' . $e->getMessage());
             $frontendUrl = \getenv('FRONTEND_URL') ?: 'https://tu-frontend.com';
-            header("Location: {$frontendUrl}/#/login?error=" . \urlencode($e->getMessage()));
+            $afterErr = \getenv('FRONTEND_AFTER_LOGIN_ERROR_PATH') ?: '/#/login';
+            header("Location: {$frontendUrl}{$afterErr}?error=" . \urlencode($e->getMessage()));
             exit;
         }
     }
@@ -319,11 +322,36 @@ class AuthController
 
     // ========== Privados ==========
 
+    private function effectiveRedirectUri(): string
+    {
+        // Base según host actual
+        $scheme = 'https';
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+            $scheme = 'https';
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+            $scheme = $_SERVER['HTTP_X_FORWARDED_PROTO']; // Railway set
+        }
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $currentCallback = $scheme . '://' . $host . '/auth/google/callback';
+
+        // Env (si existe)
+        $env = \getenv('GOOGLE_REDIRECT_URI') ?: '';
+        $redirectUri = $env !== '' ? $env : $currentCallback;
+
+        // Si el host del env NO coincide con el host actual, forzamos el actual
+        $envHost = parse_url($redirectUri, PHP_URL_HOST);
+        if ($envHost && \strcasecmp($envHost, $host) !== 0) {
+            error_log("AuthController: override redirect_uri {$redirectUri} -> {$currentCallback} (host mismatch)");
+            $redirectUri = $currentCallback;
+        }
+        return $redirectUri;
+    }
+
     private function exchangeCodeForToken(string $authCode): ?array
     {
         $clientId     = \getenv('GOOGLE_CLIENT_ID');
         $clientSecret = \getenv('GOOGLE_CLIENT_SECRET');
-        $redirectUri  = \getenv('GOOGLE_REDIRECT_URI') ?: 'https://cepcco-backend-production.up.railway.app/auth/google/callback';
+        $redirectUri  = $this->effectiveRedirectUri(); // usar el mismo que se envió a Google
 
         $postData = [
             'client_id'     => $clientId,
@@ -389,6 +417,8 @@ class AuthController
         ];
 
         if ($existingUser) {
+            // Si tu DatabaseManager NO es el nuevo, puedes cambiar a WHERE nombrado:
+            // \DatabaseManager::update('users', $userData, 'id = :id', ['id' => $existingUser['id']]);
             \DatabaseManager::update('users', $userData, 'id = ?', [$existingUser['id']]);
             $userId = $existingUser['id'];
         } else {
@@ -463,7 +493,6 @@ class AuthController
 
 /**
  * Alias global para routers que instancian "AuthController" sin namespace.
- * (Sin abrir otro namespace para evitar mezclas de sintaxis.)
  */
 if (!\class_exists('AuthController', false)) {
     \class_alias(__NAMESPACE__ . '\AuthController', 'AuthController');
