@@ -38,7 +38,7 @@ if (is_file($__dm)) {
 class AuthController
 {
     // ==============================
-    // DIAGNÓSTICO (puedes quitar las rutas si no las usas)
+    // DIAGNÓSTICO
     // ==============================
     public function googlePing(): void
     {
@@ -55,20 +55,19 @@ class AuthController
 
     public function googleDiag(): void
     {
+        $redirectUri = $this->effectiveRedirectUri();
         $env = [
             'GOOGLE_CLIENT_ID'     => (\getenv('GOOGLE_CLIENT_ID')     !== false && \getenv('GOOGLE_CLIENT_ID')     !== ''),
             'GOOGLE_CLIENT_SECRET' => (\getenv('GOOGLE_CLIENT_SECRET') !== false && \getenv('GOOGLE_CLIENT_SECRET') !== ''),
             'GOOGLE_REDIRECT_URI'  => (\getenv('GOOGLE_REDIRECT_URI')  !== false && \getenv('GOOGLE_REDIRECT_URI')  !== ''),
             'FRONTEND_URL'         => (\getenv('FRONTEND_URL')         !== false && \getenv('FRONTEND_URL')         !== ''),
-            'FRONTEND_AFTER_LOGIN_PATH'       => (\getenv('FRONTEND_AFTER_LOGIN_PATH')       !== false && \getenv('FRONTEND_AFTER_LOGIN_PATH')       !== ''),
-            'FRONTEND_AFTER_LOGIN_ERROR_PATH' => (\getenv('FRONTEND_AFTER_LOGIN_ERROR_PATH') !== false && \getenv('FRONTEND_AFTER_LOGIN_ERROR_PATH') !== ''),
         ];
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'status' => 'diag',
             'env_present' => $env,
-            'effective_redirect_uri' => $this->effectiveRedirectUri(),
+            'effective_redirect_uri' => $redirectUri,
             'db' => [
                 'file_exists' => is_file(__DIR__ . '/../utils/database_manager.php'),
                 'class_loaded'=> \class_exists('\\DatabaseManager', false),
@@ -83,7 +82,7 @@ class AuthController
     public function googleAuth(): void
     {
         $clientId    = \getenv('GOOGLE_CLIENT_ID');
-        $redirectUri = $this->effectiveRedirectUri(); // consistente con el dominio actual
+        $redirectUri = $this->effectiveRedirectUri(); // <— SIEMPRE coherente con el dominio actual
 
         if (!$clientId || !$redirectUri) {
             http_response_code(500);
@@ -192,6 +191,10 @@ class AuthController
             // Info adicional (no crítica)
             $userInfo = $this->getGoogleUserInfo($tokenData['access_token'] ?? '');
 
+            // Log de debug
+            error_log("Google Auth - Perfil: " . json_encode($perfil));
+            error_log("Google Auth - UserInfo: " . json_encode($userInfo));
+
             // Crear/actualizar usuario
             $user = $this->createOrUpdateUser($perfil, $userInfo);
 
@@ -225,6 +228,7 @@ class AuthController
 
         } catch (\Exception $e) {
             error_log('Google callback error: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
             $frontendUrl = \getenv('FRONTEND_URL') ?: 'https://tu-frontend.com';
             $afterErr = \getenv('FRONTEND_AFTER_LOGIN_ERROR_PATH') ?: '/#/login';
             header("Location: {$frontendUrl}{$afterErr}?error=" . \urlencode($e->getMessage()));
@@ -325,12 +329,12 @@ class AuthController
 
     private function effectiveRedirectUri(): string
     {
-        // Base según host actual (detrás de proxy en Railway)
+        // Base según host actual
         $scheme = 'https';
-        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
-            $scheme = $_SERVER['HTTP_X_FORWARDED_PROTO'];
-        } elseif (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
             $scheme = 'https';
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+            $scheme = $_SERVER['HTTP_X_FORWARDED_PROTO']; // Railway set
         }
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $currentCallback = $scheme . '://' . $host . '/auth/google/callback';
@@ -404,38 +408,71 @@ class AuthController
 
     private function createOrUpdateUser(array $perfil, ?array $userInfo): array
     {
-        // Buscar por google_id o email
+        // Verificar si el usuario ya existe
         $existingUser = \DatabaseManager::fetchOne(
             "SELECT * FROM users WHERE google_id = ? OR email = ?",
             [$perfil['sub'], $perfil['email']]
         );
 
-        if ($existingUser) {
-            // Actualizar solo lo que cambia (sin tocar email/google_id)
-            $updateData = [
-                'name'       => $userInfo['name']    ?? '',
-                'avatar_url' => $userInfo['picture'] ?? null,
-                'last_login' => date('Y-m-d H:i:s'),
-            ];
+        // Asegurar que todos los valores estén definidos
+        $userData = [
+            'email'      => $perfil['email'] ?? '',
+            'google_id'  => $perfil['sub'] ?? '',
+            'name'       => $userInfo['name'] ?? $perfil['name'] ?? '',
+            'avatar_url' => $userInfo['picture'] ?? $perfil['picture'] ?? null,
+            'last_login' => date('Y-m-d H:i:s')
+        ];
 
-            // FIX HY093: WHERE con placeholder nombrado (nada de '?')
-            \DatabaseManager::update('users', $updateData, 'id = :id', ['id' => $existingUser['id']]);
-            $userId = $existingUser['id'];
-        } else {
-            // Insert con defaults del schema (plan/status por defecto en DB)
-            $userData = [
-                'email'      => $perfil['email'] ?? '',
-                'google_id'  => $perfil['sub']   ?? '',
-                'name'       => $userInfo['name']    ?? '',
-                'avatar_url' => $userInfo['picture'] ?? null,
-                'last_login' => date('Y-m-d H:i:s'),
-                'tenant_id'  => $this->determineTenantId(),
+        error_log("createOrUpdateUser - userData preparado: " . json_encode($userData));
+        error_log("createOrUpdateUser - existingUser: " . json_encode($existingUser));
+
+        if ($existingUser && !empty($existingUser)) {
+            // ACTUALIZAR - solo los campos que queremos cambiar
+            $updateData = [
+                'name'       => $userData['name'],
+                'avatar_url' => $userData['avatar_url'], 
+                'last_login' => $userData['last_login']
             ];
-            $userId = \DatabaseManager::insert('users', $userData);
+            
+            error_log("createOrUpdateUser - Actualizando usuario ID: " . $existingUser['id']);
+            error_log("createOrUpdateUser - updateData: " . json_encode($updateData));
+            
+            try {
+                $affectedRows = \DatabaseManager::update('users', $updateData, 'id = ?', [$existingUser['id']]);
+                error_log("createOrUpdateUser - Filas afectadas: " . $affectedRows);
+                $userId = $existingUser['id'];
+            } catch (\Exception $e) {
+                error_log("createOrUpdateUser - Error en update: " . $e->getMessage());
+                throw $e;
+            }
+        } else {
+            // CREAR
+            $userData['tenant_id'] = $this->determineTenantId();
+            $userData['plan'] = 'basic';
+            $userData['status'] = 'active';
+            $userData['created_at'] = date('Y-m-d H:i:s');
+            
+            error_log("createOrUpdateUser - Creando nuevo usuario");
+            error_log("createOrUpdateUser - userData completo: " . json_encode($userData));
+            
+            try {
+                $userId = \DatabaseManager::insert('users', $userData);
+                error_log("createOrUpdateUser - Usuario creado con ID: " . $userId);
+            } catch (\Exception $e) {
+                error_log("createOrUpdateUser - Error en insert: " . $e->getMessage());
+                throw $e;
+            }
         }
 
-        // Retornar usuario actualizado/creado
-        return \DatabaseManager::fetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
+        // Obtener y retornar usuario completo
+        $user = \DatabaseManager::fetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
+        
+        if (!$user || empty($user)) {
+            throw new \Exception("Error: No se pudo recuperar el usuario después de crear/actualizar");
+        }
+        
+        error_log("createOrUpdateUser - Usuario final: " . json_encode($user));
+        return $user;
     }
 
     private function determineTenantId(): string
