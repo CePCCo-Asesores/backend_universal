@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Frontend de prueba (SPA)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+           margin: 0; padding: 2rem; display: grid; place-items: center;
+           min-height: 100vh; background:#0b132b; color:#fff; }
+    .card { background:#1c2541; padding:2rem; border-radius:16px;
+            max-width:720px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,.3);}
+    h1 { margin:0 0 1rem; font-size:1.6rem; }
+    p  { opacity:.95; line-height:1.5; }
+    .grid { display:grid; gap:.75rem; margin-top:1rem; }
+    .row  { display:flex; gap:.75rem; flex-wrap:wrap; }
+    .btn { padding:.9rem 1.1rem; border-radius:12px; border:0; cursor:pointer;
+           font-weight:600; text-decoration:none; display:inline-block; }
+    .btn-primary   { background:#5bc0be; color:#001219; }
+    .btn-secondary { background:#3a506b; color:#fff; }
+    .ok  { color:#5bc0be; font-weight:700; }
+    .bad { color:#ff6b6b; font-weight:700; }
+    code { background:#0b132b; padding:.15rem .4rem; border-radius:6px; }
+    .muted { opacity:.8; font-size:.95rem }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="app"><!-- se inyecta con JS --></div>
+  </div>
+
+  <script>
+    // ========================
+    // CONFIGURA AQUÍ TU BACKEND
+    // ========================
+    const BACKEND_BASE = 'https://cepcco-backend-production.up.railway.app';
+
+    // ========================
+    // UTILIDADES
+    // ========================
+    function parseHash() {
+      // #/ruta?key=val   -> { path: '/ruta', query: URLSearchParams }
+      const h = location.hash || '#/';
+      const idx = h.indexOf('?');
+      const route = (idx === -1 ? h.slice(1) : h.slice(1, idx)) || '/';
+      const query = new URLSearchParams(idx === -1 ? '' : h.slice(idx + 1));
+      return { path: route.startsWith('/') ? route : '/' + route, query };
+    }
+    function h(tag, attrs = {}, children = []) {
+      const el = document.createElement(tag);
+      for (const [k,v] of Object.entries(attrs)) {
+        if (k === 'class') el.className = v;
+        else if (k === 'html') el.innerHTML = v;
+        else el.setAttribute(k, v);
+      }
+      (Array.isArray(children) ? children : [children])
+        .filter(Boolean).forEach(c => el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+      return el;
+    }
+    function link(href, txt, cls='btn btn-secondary') {
+      const a = h('a', { href, class: cls });
+      a.textContent = txt;
+      return a;
+    }
+
+    // ========================
+    // VISTAS
+    // ========================
+    function ViewHome() {
+      return h('div', {}, [
+        h('h1', {}, 'Frontend de prueba'),
+        h('p', {}, 'Este botón inicia sesión con Google redirigiendo al backend:'),
+        h('div', { class: 'row' }, [
+          link(`${BACKEND_BASE}/auth/google`, 'Iniciar con Google', 'btn btn-primary'),
+          link(`${BACKEND_BASE}/auth/status`, 'Ver /auth/status (backend)'),
+        ]),
+        h('p', { class: 'muted', html: `
+          Backend: <code>${BACKEND_BASE}</code><br>
+          Luego del login, este SPA espera volver a <code>#/dashboard?auth=success</code>.
+        `})
+      ]);
+    }
+
+    function ViewDashboard(query) {
+      const msg = query.get('auth') === 'success'
+        ? h('p', { class: 'ok' }, '¡Autenticado correctamente!')
+        : h('p', { class: 'bad', html: 'Sin parámetro <code>auth=success</code>' });
+      return h('div', {}, [
+        h('h1', {}, 'Dashboard (prueba)'),
+        msg,
+        h('div', { class: 'grid' }, [
+          link(`${BACKEND_BASE}/auth/me`, 'Ver /auth/me (backend)'),
+          link(`${BACKEND_BASE}/auth/status`, 'Ver /auth/status (backend)'),
+          link(`${BACKEND_BASE}/auth/logout`, 'Cerrar sesión', 'btn btn-primary'),
+          link('#/', 'Ir al inicio'),
+        ]),
+        h('p', { class: 'muted' }, 'Sugerencia: los enlaces al backend son navegación, no fetch, para que el cookie HttpOnly (SameSite=Lax) viaje correctamente.')
+      ]);
+    }
+
+    function ViewLogin(query) {
+      const error = query.get('error');
+      return h('div', {}, [
+        h('h1', {}, 'Iniciar Sesión'),
+        h('p', { class: 'bad', html: error ? `Error: <code>${error}</code>` : 'Ingresa con Google' }),
+        h('div', { class: 'row' }, [
+          link(`${BACKEND_BASE}/auth/google`, 'Iniciar con Google', 'btn btn-primary'),
+          link('#/', 'Ir al inicio'),
+        ])
+      ]);
+    }
+
+    function ViewNotFound() {
+      return h('div', {}, [
+        h('h1', {}, 'Página no encontrada'),
+        h('p', {}, 'Usa las opciones para navegar.'),
+        h('div', { class: 'row' }, [
+          link('#/', 'Ir al inicio', 'btn btn-primary'),
+          link(`${BACKEND_BASE}/auth/status`, 'Ver /auth/status (backend)')
+        ])
+      ]);
+    }
+
+    // ========================
+    // ROUTER
+    // ========================
+    function render() {
+      const root = document.getElementById('app');
+      root.innerHTML = '';
+      const { path, query } = parseHash();
+      let view;
+      if (path === '/') view = ViewHome();
+      else if (path === '/dashboard') view = ViewDashboard(query);
+      else if (path === '/login') view = ViewLogin(query);
+      else view = ViewNotFound();
+      root.appendChild(view);
+    }
+    window.addEventListener('hashchange', render);
+    window.addEventListener('DOMContentLoaded', render);
+  </script>
+</body>
+</html>
