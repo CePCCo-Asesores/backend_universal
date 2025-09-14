@@ -3,18 +3,20 @@ declare(strict_types=1);
 
 /**
  * DatabaseManager - implementación real (PostgreSQL en Railway).
- * - Lee DATABASE_URL/POSTGRES_URL (postgres://user:pass@host:port/db?sslmode=require)
- * - Alternativa: DB_DRIVER (pgsql|mysql), DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
- * - PDO con ERRMODE_EXCEPTION
- * - Métodos usados por tu backend: fetchOne, fetchAll, insert, update, delete
- * - Métodos usados por bin/init_database.php: healthCheck, initializeSchema, getStats
+ * - Lee DATABASE_URL (recomendado) o POSTGRES_URL.
+ * - Alternativa: DB_DRIVER (pgsql|mysql), DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS.
+ * - Usa PDO con ERRMODE_EXCEPTION.
+ *
+ * Métodos:
+ *   - pdo(), fetchOne(), fetchAll(), insert(), update(), delete()
+ *   - healthCheck(), initializeSchema(), getStats()
  */
 
 final class DatabaseManager
 {
     private static ?\PDO $pdo = null;
 
-    // ---------- Conexión ----------
+    // ---------------- Conexión ----------------
     private static function connect(): \PDO
     {
         if (self::$pdo instanceof \PDO) {
@@ -28,16 +30,18 @@ final class DatabaseManager
         $pass = '';
 
         if ($dbUrl !== '') {
-            // postgres://user:pass@host:port/dbname?sslmode=require
+            // Ej: postgresql://user:pass@postgres.railway.internal:5432/railway?sslmode=require
             $parsed = parse_url($dbUrl);
             if ($parsed === false) {
                 throw new \RuntimeException('DATABASE_URL inválido');
             }
-            $scheme = $parsed['scheme'] ?? 'postgres';
+
+            $scheme = $parsed['scheme'] ?? 'postgresql';
+            // Normalizar a PDO
             $driver = ($scheme === 'postgres' || $scheme === 'postgresql') ? 'pgsql' : $scheme;
 
             $host = $parsed['host'] ?? 'localhost';
-            $port = $parsed['port'] ?? 5432;
+            $port = (int)($parsed['port'] ?? 5432);
             $user = urldecode($parsed['user'] ?? '');
             $pass = urldecode($parsed['pass'] ?? '');
             $db   = ltrim($parsed['path'] ?? '', '/');
@@ -60,10 +64,10 @@ final class DatabaseManager
                 throw new \RuntimeException("Driver no soportado: {$driver}");
             }
         } else {
-            // Variables separadas
+            // Plan B: variables sueltas
             $driver = getenv('DB_DRIVER') ?: 'pgsql';
             $host = getenv('DB_HOST') ?: 'localhost';
-            $port = getenv('DB_PORT') ?: ($driver === 'pgsql' ? '5432' : '3306');
+            $port = (int)(getenv('DB_PORT') ?: ($driver === 'pgsql' ? 5432 : 3306));
             $db   = getenv('DB_NAME') ?: '';
             $user = getenv('DB_USER') ?: '';
             $pass = getenv('DB_PASS') ?: '';
@@ -91,7 +95,7 @@ final class DatabaseManager
         return self::connect();
     }
 
-    // ---------- Helpers de consulta ----------
+    // ---------------- Helpers de consulta ----------------
     public static function fetchOne(string $sql, array $params = []): array
     {
         $stmt = self::pdo()->prepare($sql);
@@ -115,19 +119,19 @@ final class DatabaseManager
         if (empty($data)) {
             throw new \InvalidArgumentException('insert(): datos vacíos');
         }
-        $cols = array_keys($data);
-        $place = array_map(fn($c) => ':' . $c, $cols);
+
+        $cols   = array_keys($data);
+        $place  = array_map(fn($c) => ':' . $c, $cols);
 
         $sql = 'INSERT INTO ' . $table
              . ' (' . implode(',', $cols) . ')'
              . ' VALUES (' . implode(',', $place) . ')';
 
-        $pdo = self::pdo();
+        $pdo    = self::pdo();
         $driver = $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
-        $id = 0;
+        $id     = 0;
 
         if ($driver === 'pgsql') {
-            // Importante para Postgres: recuperar id
             $sql .= ' RETURNING id';
             $stmt = $pdo->prepare($sql);
             $stmt->execute(self::normalizeParams($data));
@@ -147,22 +151,48 @@ final class DatabaseManager
 
     /**
      * update('users', ['name'=>'Z'], 'id = ?', [1]) -> filas afectadas
+     * Corrige mezcla de placeholders: convierte '?' del WHERE a :w1, :w2, ...
      */
     public static function update(string $table, array $data, string $where, array $params = []): int
     {
         if (empty($data)) {
             throw new \InvalidArgumentException('update(): datos vacíos');
         }
-        $sets = [];
-        foreach ($data as $k => $v) { $sets[] = "{$k} = :set_{$k}"; }
 
-        $sql = 'UPDATE ' . $table . ' SET ' . implode(',', $sets) . ' WHERE ' . $where;
-        $stmt = self::pdo()->prepare($sql);
+        // SET con placeholders nombrados
+        $sets = [];
+        foreach ($data as $k => $v) {
+            $sets[] = "{$k} = :set_{$k}";
+        }
 
         $execParams = [];
-        foreach ($data as $k => $v) { $execParams[":set_{$k}"] = $v; }
-        foreach (array_values($params) as $i => $v) { $execParams[$i + 1] = $v; } // soporta ? posicional
+        foreach ($data as $k => $v) {
+            $execParams[":set_{$k}"] = $v;
+        }
 
+        // WHERE: si hay '?', convertir a :w1, :w2, ...
+        if (strpos($where, '?') !== false) {
+            $i = 0;
+            $whereSql = preg_replace_callback('/\?/', function () use (&$i) {
+                $i++;
+                return ":w{$i}";
+            }, $where);
+
+            $j = 1;
+            foreach (array_values($params) as $v) {
+                $execParams[":w{$j}"] = $v;
+                $j++;
+            }
+        } else {
+            // WHERE ya nombrado (id = :id)
+            $whereSql = $where;
+            foreach ($params as $k => $v) {
+                $execParams[(str_starts_with((string)$k, ':') ? (string)$k : ':' . $k)] = $v;
+            }
+        }
+
+        $sql = 'UPDATE ' . $table . ' SET ' . implode(',', $sets) . ' WHERE ' . $whereSql;
+        $stmt = self::pdo()->prepare($sql);
         $stmt->execute($execParams);
         return $stmt->rowCount();
     }
@@ -172,9 +202,28 @@ final class DatabaseManager
      */
     public static function delete(string $table, string $where, array $params = []): int
     {
-        $sql = 'DELETE FROM ' . $table . ' WHERE ' . $where;
+        // Permitir '?' posicionales
+        if (strpos($where, '?') !== false) {
+            $i = 0;
+            $whereSql = preg_replace_callback('/\?/', function () use (&$i) {
+                $i++;
+                return ":w{$i}";
+            }, $where);
+
+            $execParams = [];
+            $j = 1;
+            foreach (array_values($params) as $v) {
+                $execParams[":w{$j}"] = $v;
+                $j++;
+            }
+        } else {
+            $whereSql = $where;
+            $execParams = self::normalizeParams($params);
+        }
+
+        $sql = 'DELETE FROM ' . $table . ' WHERE ' . $whereSql;
         $stmt = self::pdo()->prepare($sql);
-        $stmt->execute(self::normalizeParams($params));
+        $stmt->execute($execParams);
         return $stmt->rowCount();
     }
 
@@ -184,15 +233,16 @@ final class DatabaseManager
         $out = [];
         $i = 1;
         foreach ($params as $k => $v) {
-            if (is_int($k)) { $out[$i++] = $v; }
-            else {
+            if (is_int($k)) {
+                $out[$i++] = $v; // posicional -> 1,2,3...
+            } else {
                 $out[ str_starts_with((string)$k, ':') ? (string)$k : ':' . $k ] = $v;
             }
         }
         return $out;
     }
 
-    // ---------- Salud / Schema / Stats ----------
+    // ---------------- Salud / Schema / Stats ----------------
     public static function healthCheck(): array
     {
         try {
@@ -243,12 +293,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique
 
 -- Trigger de updated_at
 CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS \$\$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+\$\$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
 CREATE TRIGGER trg_users_updated_at
@@ -292,9 +342,9 @@ SQL;
 
     public static function getStats(): array
     {
-        $users = (int)(self::fetchOne('SELECT COUNT(*) AS c FROM users')['c'] ?? 0);
+        $users    = (int)(self::fetchOne('SELECT COUNT(*) AS c FROM users')['c'] ?? 0);
         $sessions = (int)(self::fetchOne('SELECT COUNT(*) AS c FROM user_sessions WHERE expires_at > NOW()')['c'] ?? 0);
-        $usage = (int)(self::fetchOne('SELECT COUNT(*) AS c FROM assistant_usage')['c'] ?? 0);
+        $usage    = (int)(self::fetchOne('SELECT COUNT(*) AS c FROM assistant_usage')['c'] ?? 0);
 
         return [
             'users' => $users,
