@@ -417,11 +417,13 @@ class AuthController
         ];
 
         if ($existingUser) {
-            error_log("DEBUG userData: " . json_encode($userData));
-            error_log("DEBUG existingUser ID: " . $existingUser['id']);
-            // Si tu DatabaseManager NO es el nuevo, puedes cambiar a WHERE nombrado:
-            // \DatabaseManager::update('users', $userData, 'id = :id', ['id' => $existingUser['id']]);
-            \DatabaseManager::update('users', $userData, 'id = ?', [$existingUser['id']]);
+            // Solo actualizar campos específicos para evitar error HY093
+            $updateData = [
+                'name'       => $userInfo['name'] ?: '',
+                'avatar_url' => $userInfo['picture'],
+                'last_login' => date('Y-m-d H:i:s')
+            ];
+            \DatabaseManager::update('users', $updateData, 'id = ?', [$existingUser['id']]);
             $userId = $existingUser['id'];
         } else {
             $userData['tenant_id'] = $this->determineTenantId();
