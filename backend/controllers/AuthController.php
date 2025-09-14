@@ -38,7 +38,7 @@ if (is_file($__dm)) {
 class AuthController
 {
     // ==============================
-    // DIAGNÓSTICO
+    // DIAGNÓSTICO (puedes quitar las rutas si no las usas)
     // ==============================
     public function googlePing(): void
     {
@@ -55,19 +55,20 @@ class AuthController
 
     public function googleDiag(): void
     {
-        $redirectUri = $this->effectiveRedirectUri();
         $env = [
             'GOOGLE_CLIENT_ID'     => (\getenv('GOOGLE_CLIENT_ID')     !== false && \getenv('GOOGLE_CLIENT_ID')     !== ''),
             'GOOGLE_CLIENT_SECRET' => (\getenv('GOOGLE_CLIENT_SECRET') !== false && \getenv('GOOGLE_CLIENT_SECRET') !== ''),
             'GOOGLE_REDIRECT_URI'  => (\getenv('GOOGLE_REDIRECT_URI')  !== false && \getenv('GOOGLE_REDIRECT_URI')  !== ''),
             'FRONTEND_URL'         => (\getenv('FRONTEND_URL')         !== false && \getenv('FRONTEND_URL')         !== ''),
+            'FRONTEND_AFTER_LOGIN_PATH'       => (\getenv('FRONTEND_AFTER_LOGIN_PATH')       !== false && \getenv('FRONTEND_AFTER_LOGIN_PATH')       !== ''),
+            'FRONTEND_AFTER_LOGIN_ERROR_PATH' => (\getenv('FRONTEND_AFTER_LOGIN_ERROR_PATH') !== false && \getenv('FRONTEND_AFTER_LOGIN_ERROR_PATH') !== ''),
         ];
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'status' => 'diag',
             'env_present' => $env,
-            'effective_redirect_uri' => $redirectUri,
+            'effective_redirect_uri' => $this->effectiveRedirectUri(),
             'db' => [
                 'file_exists' => is_file(__DIR__ . '/../utils/database_manager.php'),
                 'class_loaded'=> \class_exists('\\DatabaseManager', false),
@@ -82,7 +83,7 @@ class AuthController
     public function googleAuth(): void
     {
         $clientId    = \getenv('GOOGLE_CLIENT_ID');
-        $redirectUri = $this->effectiveRedirectUri(); // <— SIEMPRE coherente con el dominio actual
+        $redirectUri = $this->effectiveRedirectUri(); // consistente con el dominio actual
 
         if (!$clientId || !$redirectUri) {
             http_response_code(500);
@@ -324,12 +325,12 @@ class AuthController
 
     private function effectiveRedirectUri(): string
     {
-        // Base según host actual
+        // Base según host actual (detrás de proxy en Railway)
         $scheme = 'https';
-        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+            $scheme = $_SERVER['HTTP_X_FORWARDED_PROTO'];
+        } elseif (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
             $scheme = 'https';
-        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
-            $scheme = $_SERVER['HTTP_X_FORWARDED_PROTO']; // Railway set
         }
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $currentCallback = $scheme . '://' . $host . '/auth/google/callback';
@@ -403,29 +404,37 @@ class AuthController
 
     private function createOrUpdateUser(array $perfil, ?array $userInfo): array
     {
+        // Buscar por google_id o email
         $existingUser = \DatabaseManager::fetchOne(
             "SELECT * FROM users WHERE google_id = ? OR email = ?",
             [$perfil['sub'], $perfil['email']]
         );
 
-        $userData = [
-            'email'      => $perfil['email'],
-            'google_id'  => $perfil['sub'],
-            'name'       => $userInfo['name']    ?? '',
-            'avatar_url' => $userInfo['picture'] ?? null,
-            'last_login' => date('Y-m-d H:i:s')
-        ];
-
         if ($existingUser) {
-            // Si tu DatabaseManager NO es el nuevo, puedes cambiar a WHERE nombrado:
-            // \DatabaseManager::update('users', $userData, 'id = :id', ['id' => $existingUser['id']]);
-            \DatabaseManager::update('users', $userData, 'id = ?', [$existingUser['id']]);
+            // Actualizar solo lo que cambia (sin tocar email/google_id)
+            $updateData = [
+                'name'       => $userInfo['name']    ?? '',
+                'avatar_url' => $userInfo['picture'] ?? null,
+                'last_login' => date('Y-m-d H:i:s'),
+            ];
+
+            // FIX HY093: WHERE con placeholder nombrado (nada de '?')
+            \DatabaseManager::update('users', $updateData, 'id = :id', ['id' => $existingUser['id']]);
             $userId = $existingUser['id'];
         } else {
-            $userData['tenant_id'] = $this->determineTenantId();
+            // Insert con defaults del schema (plan/status por defecto en DB)
+            $userData = [
+                'email'      => $perfil['email'] ?? '',
+                'google_id'  => $perfil['sub']   ?? '',
+                'name'       => $userInfo['name']    ?? '',
+                'avatar_url' => $userInfo['picture'] ?? null,
+                'last_login' => date('Y-m-d H:i:s'),
+                'tenant_id'  => $this->determineTenantId(),
+            ];
             $userId = \DatabaseManager::insert('users', $userData);
         }
 
+        // Retornar usuario actualizado/creado
         return \DatabaseManager::fetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
     }
 
