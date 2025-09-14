@@ -217,13 +217,13 @@ class AuthController
 
             // Redirigir al frontend
             $frontendUrl = \getenv('FRONTEND_URL') ?: 'https://tu-frontend.com';
-            header("Location: {$frontendUrl}/dashboard?auth=success");
+            header("Location: {$frontendUrl}/#/dashboard?auth=success");
             exit;
 
         } catch (\Exception $e) {
             error_log('Google callback error: ' . $e->getMessage());
             $frontendUrl = \getenv('FRONTEND_URL') ?: 'https://tu-frontend.com';
-            header("Location: {$frontendUrl}/login?error=" . \urlencode($e->getMessage()));
+            header("Location: {$frontendUrl}/#/login?error=" . \urlencode($e->getMessage()));
             exit;
         }
     }
