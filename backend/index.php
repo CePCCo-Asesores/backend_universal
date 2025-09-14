@@ -138,6 +138,17 @@ if (!$controllerName || !$actionName) {
 
 // ---------- Instanciar controlador ----------
 $class = resolve_controller_class($controllerName);
+
+// DEBUG TEMPORAL - agregar estas líneas
+if ($controllerName === 'AuthController') {
+    error_log("DEBUG: AuthController resolution");
+    error_log("Class found: " . ($class ?: 'NULL'));
+    error_log("Controllers\\AuthController exists: " . (class_exists('\\Controllers\\AuthController') ? 'YES' : 'NO'));
+    error_log("AuthController exists: " . (class_exists('\\AuthController') ? 'YES' : 'NO'));
+    error_log("Path: " . $path);
+    error_log("Action: " . $actionName);
+}
+
 if ($class === null) {
     json_response(['error' => 'Controlador no encontrado', 'controller' => $controllerName], 500);
 }
