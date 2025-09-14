@@ -417,6 +417,9 @@ class AuthController
         ];
 
         if ($existingUser) {
+             // AGREGAR ESTAS 2 LÍNEAS AQUÍ:
+             error_log("DEBUG userData: " . json_encode($userData));
+             error_log("DEBUG existingUser ID: " . $existingUser['id']);
             // Solo actualizar campos específicos para evitar error HY093
             $updateData = [
                 'name'       => $userInfo['name'] ?: '',
