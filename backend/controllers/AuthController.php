@@ -7,33 +7,38 @@ use Services\GoogleAuthService;
 use Services\JwtService;
 
 /**
+ * Cargar servicios sin Composer/autoloader (rutas case-sensitive en Linux).
+ */
+$__svc = __DIR__ . '/../services/GoogleAuthService.php';
+if (is_file($__svc)) { require_once $__svc; } else { error_log("GoogleAuthService no encontrado: $__svc"); }
+
+$__jwt = __DIR__ . '/../services/JwtService.php';
+if (is_file($__jwt)) { require_once $__jwt; } else { error_log("JwtService no encontrado: $__jwt"); }
+
+/**
  * Carga condicional de DatabaseManager:
- * - Si existe utils/database_manager.php se usa el real.
- * - Si NO existe, define un stub en Controllers\ y lo alias a \DatabaseManager
+ * - Si existe utils/database_manager.php se usa el real (\DatabaseManager).
+ * - Si NO existe, define un stub en este namespace y lo alias a \DatabaseManager
  *   para evitar fatales en endpoints que no tocan DB.
  */
 $__dm = __DIR__ . '/../utils/database_manager.php';
 if (is_file($__dm)) {
-    require_once $__dm; // \DatabaseManager real (global)
-} else {
-    if (!\class_exists('\\DatabaseManager', false)) {
-        // Stub en este namespace…
-        class DatabaseManager {
-            public static function fetchOne(string $sql, array $params = []): array { return ['count' => 0]; }
-            public static function fetchAll(string $sql, array $params = []): array { return []; }
-            public static function insert(string $table, array $data): int { return 1; }
-            public static function update(string $table, array $data, string $where, array $params = []): int { return 1; }
-            public static function delete(string $table, string $where, array $params = []): int { return 1; }
-        }
-        // …y alias a la clase global que usa el resto del código
-        \class_alias(__NAMESPACE__ . '\\DatabaseManager', 'DatabaseManager');
+    require_once $__dm; // carga la clase \DatabaseManager real
+} elseif (!\class_exists('\\DatabaseManager', false)) {
+    class DatabaseManager {
+        public static function fetchOne(string $sql, array $params = []): array { return ['count' => 0]; }
+        public static function fetchAll(string $sql, array $params = []): array { return []; }
+        public static function insert(string $table, array $data): int { return 1; }
+        public static function update(string $table, array $data, string $where, array $params = []): int { return 1; }
+        public static function delete(string $table, string $where, array $params = []): int { return 1; }
     }
+    \class_alias(__NAMESPACE__ . '\DatabaseManager', 'DatabaseManager');
 }
 
 class AuthController
 {
     // ==============================
-    // DIAGNÓSTICO: GET /auth/google/ping
+    // DIAGNÓSTICO (si no los usas, puedes quitar las rutas)
     // ==============================
     public function googlePing(): void
     {
@@ -48,9 +53,6 @@ class AuthController
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
-    // ==============================
-    // DIAGNÓSTICO: GET /auth/google/diag
-    // ==============================
     public function googleDiag(): void
     {
         $env = [
@@ -95,9 +97,7 @@ class AuthController
             exit;
         }
 
-        if (\session_status() !== \PHP_SESSION_ACTIVE) {
-            @\session_start();
-        }
+        if (\session_status() !== \PHP_SESSION_ACTIVE) { @\session_start(); }
 
         // CSRF state (sesión + cookie fallback 10 min)
         $state = \bin2hex(\random_bytes(16));
@@ -175,9 +175,7 @@ class AuthController
             }
 
             $authCode = $_GET['code'] ?? null;
-            if (!$authCode) {
-                throw new \Exception('Código de autorización no recibido');
-            }
+            if (!$authCode) throw new \Exception('Código de autorización no recibido');
 
             // Intercambiar código por token
             $tokenData = $this->exchangeCodeForToken($authCode);
@@ -187,9 +185,7 @@ class AuthController
 
             // Validar ID token
             $perfil = GoogleAuthService::validate($tokenData['id_token']);
-            if (!$perfil) {
-                throw new \Exception('ID token inválido');
-            }
+            if (!$perfil) throw new \Exception('ID token inválido');
 
             // Info adicional (no crítica)
             $userInfo = $this->getGoogleUserInfo($tokenData['access_token'] ?? '');
@@ -470,6 +466,5 @@ class AuthController
  * (Sin abrir otro namespace para evitar mezclas de sintaxis.)
  */
 if (!\class_exists('AuthController', false)) {
-    \class_alias(__NAMESPACE__ . '\\AuthController', 'AuthController');
+    \class_alias(__NAMESPACE__ . '\AuthController', 'AuthController');
 }
-
